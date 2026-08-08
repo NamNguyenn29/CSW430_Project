@@ -14,7 +14,7 @@ export const WelcomeScreen = () => {
       <View style={styles.content}>
         {/* App Title */}
         <View style={styles.header}>
-          <Text style={[styles.appName, { color: colors.primary }]}>DormiManager</Text>
+          <Text style={[styles.appName, { color: colors.primary }]}>DormlyManager</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Hệ thống Quản lý Kí túc xá Hiện đại & Toàn diện
           </Text>

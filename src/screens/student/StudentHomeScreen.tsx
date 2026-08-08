@@ -17,11 +17,8 @@ export const StudentHomeScreen = () => {
   const { theme, currentUser, invoices, announcements, requests, navigate } = useApp();
   const colors = COLORS[theme];
 
-  const roomInvoices = invoices.filter(i => i.roomId === currentUser.roomId);
-  const unpaidCount = roomInvoices.filter(i => i.status === 'Chưa thanh toán').length;
-  const activeRequests = requests.filter(
-    r => r.roomId === currentUser.roomId && r.status !== 'Đã giải quyết'
-  ).length;
+  const unpaidCount = invoices.filter(i => i.status === 'Chưa thanh toán').length;
+  const activeRequests = requests.filter(r => r.status !== 'Đã giải quyết').length;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>

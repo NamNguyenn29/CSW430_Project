@@ -23,7 +23,7 @@ export const AboutScreen = () => {
         
         {/* Project Card */}
         <Card style={styles.card}>
-          <Text style={[styles.title, { color: colors.primary }]}>DormiManager v1.0.0</Text>
+          <Text style={[styles.title, { color: colors.primary }]}>DormlyManager v1.0.0</Text>
           <Text style={[styles.desc, { color: colors.text }]}>
             Dự án ứng dụng di động quản lí kí túc xá tích hợp cho sinh viên và nhà trường. Hỗ trợ tra cứu phòng ở, đóng tiền điện nước, tạo yêu cầu sửa chữa và quản lý sinh viên.
           </Text>

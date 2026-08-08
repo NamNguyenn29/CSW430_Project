@@ -22,6 +22,94 @@ export const AdminHomeScreen = () => {
   const { theme, students, rooms, invoices, requests, auditLogs, notificationLogs, addAnnouncement, navigate } = useApp();
   const colors = COLORS[theme];
 
+  const formatAuditLog = (log: any) => {
+    // Translate action
+    let actionLabel = log.action || '';
+    let actionColor = colors.primary;
+    if (log.action === 'CREATE') {
+      actionLabel = 'THÊM MỚI';
+      actionColor = colors.success;
+    } else if (log.action === 'UPDATE') {
+      actionLabel = 'CẬP NHẬT';
+      actionColor = colors.warning;
+    } else if (log.action === 'DELETE') {
+      actionLabel = 'XÓA BỎ';
+      actionColor = colors.danger;
+    } else if (log.action === 'READ') {
+      actionLabel = 'TRUY XUẤT';
+      actionColor = '#60A5FA';
+    } else if (log.action === 'LOGIN') {
+      actionLabel = 'ĐĂNG NHẬP';
+      actionColor = '#818CF8';
+    } else {
+      actionLabel = actionLabel.toUpperCase();
+    }
+
+    // Translate entity type
+    let entityLabel = log.entityType || '';
+    if (log.entityType === 'AUTH') entityLabel = 'Tài khoản';
+    else if (log.entityType === 'TICKET' || log.entityType === 'TICKETME' || log.entityType === 'TICKETADMIN') entityLabel = 'Sự cố';
+    else if (log.entityType === 'TICKETCOMMENT') entityLabel = 'Bình luận sự cố';
+    else if (log.entityType === 'TICKETATTACHMENT') entityLabel = 'Ảnh đính kèm';
+    else if (log.entityType === 'INVOICE') entityLabel = 'Hóa đơn';
+    else if (log.entityType === 'ROOMASSIGNMENT') entityLabel = 'Xếp phòng';
+    else if (log.entityType === 'BUILDINGNODE') entityLabel = 'Sơ đồ phòng/tòa';
+    else if (log.entityType === 'USER') entityLabel = 'Người dùng';
+    else if (log.entityType === 'ANNOUNCEMENT') entityLabel = 'Thông báo';
+
+    // Best-effort find user name who did the action
+    let executor = 'Hệ thống / Guest';
+    if (log.userFullName) {
+      executor = log.userFullName;
+    } else if (log.userId) {
+      // Find in local students list
+      const matched = students.find((s: any) => s.id === log.userId);
+      if (matched) {
+        executor = (matched as any).name || (matched as any).fullName;
+      } else {
+        executor = `Người dùng (ID: ${log.userId.substring(0, 8)}...)`;
+      }
+    }
+
+    // Try parsing newValues/oldValues for rich details
+    let details = '';
+    try {
+      if (log.newValues) {
+        const newVal = JSON.parse(log.newValues);
+        if (log.entityType === 'INVOICE') {
+          details = `Lập hóa đơn ${newVal.month || ''} phòng ${newVal.roomName || ''} - ${newVal.amount ? newVal.amount.toLocaleString('vi-VN') + 'đ' : ''}`;
+        } else if (log.entityType === 'ANNOUNCEMENT') {
+          details = `Đăng thông báo: "${newVal.title || ''}"`;
+        } else if (log.entityType === 'TICKET' || log.entityType === 'TICKETME' || log.entityType === 'TICKETADMIN') {
+          details = `Sự cố: "${newVal.title || ''}" - Trạng thái: ${newVal.status || ''}`;
+        } else if (log.entityType === 'ROOMASSIGNMENT') {
+          details = `Gán sinh viên vào phòng ${newVal.roomName || ''}`;
+        }
+      } else if (log.oldValues) {
+        const oldVal = JSON.parse(log.oldValues);
+        if (log.entityType === 'USER' && log.action === 'UPDATE_PASSWORD') {
+          details = `Đổi mật khẩu người dùng ${oldVal.fullName || oldVal.email || ''}`;
+        }
+      }
+    } catch (e) {
+      // Ignore json parsing issues
+    }
+
+    // Fallback details if empty
+    if (!details) {
+      details = `Thao tác trên đối tượng ${entityLabel} (ID: ${log.entityId ? log.entityId.substring(0, 8) + '...' : 'N/A'})`;
+    }
+
+    return {
+      actionLabel,
+      actionColor,
+      entityLabel,
+      executor,
+      details,
+      ipAddress: log.ipAddress || 'Unknown IP'
+    };
+  };
+
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [annTitle, setAnnTitle] = useState('');
   const [annContent, setAnnContent] = useState('');
@@ -228,22 +316,35 @@ export const AdminHomeScreen = () => {
         {/* Audit Logs Section */}
         <Text style={[styles.sectionTitle, { color: colors.text }]}>Nhật ký hệ thống (Audit Logs)</Text>
         {auditLogs && auditLogs.length > 0 ? (
-          auditLogs.slice(0, 4).map((log: any) => (
-            <Card key={log.id || Math.random().toString()} style={styles.logCard}>
-              <View style={styles.logHeader}>
-                <Text style={[styles.logActionText, { color: colors.primary }]}>{log.action}</Text>
-                <Text style={[styles.logTime, { color: colors.textSecondary }]}>
-                  {log.createdAt ? new Date(log.createdAt).toLocaleString('vi-VN') : 'Gần đây'}
+          auditLogs.slice(0, 4).map((log: any) => {
+            const formatted = formatAuditLog(log);
+            return (
+              <Card key={log.id || Math.random().toString()} style={[styles.logCard, { borderLeftWidth: 3, borderLeftColor: formatted.actionColor }]}>
+                <View style={styles.logHeader}>
+                  <View style={[styles.actionBadge, { backgroundColor: `${formatted.actionColor}12`, borderColor: `${formatted.actionColor}30` }]}>
+                    <Text style={[styles.actionBadgeText, { color: formatted.actionColor }]}>
+                      {formatted.actionLabel}
+                    </Text>
+                  </View>
+                  <Text style={[styles.logTime, { color: colors.textSecondary }]}>
+                    {log.createdAt ? new Date(log.createdAt).toLocaleString('vi-VN') : 'Gần đây'}
+                  </Text>
+                </View>
+                <Text style={[styles.logBodyText, { color: colors.text, fontWeight: '600', marginVertical: 6, fontSize: 13, lineHeight: 18 }]}>
+                  {formatted.details}
                 </Text>
-              </View>
-              <Text style={[styles.logBodyText, { color: colors.text }]}>
-                Đối tượng: {log.entityType} | ID: {log.entityId}
-              </Text>
-              {log.notes && (
-                <Text style={[styles.logNotesText, { color: colors.textSecondary }]}>{log.notes}</Text>
-              )}
-            </Card>
-          ))
+                <View style={[styles.logDivider, { backgroundColor: colors.border, marginVertical: 4 }]} />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 11, color: colors.textSecondary, fontWeight: '500' }}>
+                    Thực hiện: <Text style={{ color: colors.text, fontWeight: 'bold' }}>{formatted.executor}</Text>
+                  </Text>
+                  <Text style={{ fontSize: 10, color: colors.textSecondary, fontFamily: 'monospace' }}>
+                    IP: {formatted.ipAddress}
+                  </Text>
+                </View>
+              </Card>
+            );
+          })
         ) : (
           <Text style={[styles.emptyLogText, { color: colors.textSecondary }]}>Chưa có nhật ký hoạt động nào.</Text>
         )}
@@ -598,5 +699,22 @@ const styles = StyleSheet.create({
   modalBtnRow: {
     flexDirection: 'row',
     width: '100%',
+  },
+  actionBadge: {
+    paddingVertical: 2,
+    paddingHorizontal: SPACING.xs,
+    borderRadius: 4,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  logDivider: {
+    height: 1,
+    opacity: 0.5,
   },
 });

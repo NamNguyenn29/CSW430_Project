@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, StyleSheet, Text, BackHandler } from 'react-native';
 import { useApp } from '../context/AppContext';
 import { WelcomeScreen } from '../screens/auth/WelcomeScreen';
 import { LoginScreen } from '../screens/auth/LoginScreen';
@@ -32,8 +32,26 @@ import { RequestDetailScreen } from '../screens/shared/RequestDetailScreen';
 import { COLORS } from '../theme/theme';
 
 export const AppNavigator = () => {
-  const { currentScreen, theme } = useApp();
+  const { currentScreen, theme, goBack } = useApp();
   const colors = COLORS[theme];
+
+  useEffect(() => {
+    const backAction = () => {
+      const topScreens = ['Welcome', 'Login', 'StudentHome', 'AdminHome'];
+      if (topScreens.includes(currentScreen)) {
+        return false;
+      }
+      goBack();
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction,
+    );
+
+    return () => backHandler.remove();
+  }, [currentScreen, goBack]);
 
   const renderScreen = () => {
     switch (currentScreen) {

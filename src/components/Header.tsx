@@ -20,6 +20,7 @@ export const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
     currentRole,
     goBack,
     navigate,
+    announcements,
   } = useApp();
 
   const colors = COLORS[theme];
@@ -105,9 +106,11 @@ export const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
           hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
         >
           <Icon name="bell" color={colors.textSecondary} size={16} />
-          <View style={styles.badgeContainer}>
-            <Text style={styles.badgeText}>3</Text>
-          </View>
+          {announcements && announcements.length > 0 && (
+            <View style={styles.badgeContainer}>
+              <Text style={styles.badgeText}>{announcements.length}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
     </View>

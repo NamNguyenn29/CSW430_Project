@@ -19,10 +19,8 @@ export const StudentInvoiceListScreen = () => {
 
   const [activeFilter, setActiveFilter] = useState<'all' | 'unpaid' | 'paid'>('all');
 
-  // Filter student room invoices
-  const roomInvoices = invoices.filter(i => i.roomId === currentUser.roomId);
-  
-  const filteredInvoices = roomInvoices.filter(inv => {
+  // Backend already filters by userId, so we display all returned invoices
+  const filteredInvoices = invoices.filter(inv => {
     if (activeFilter === 'unpaid') return inv.status === 'Chưa thanh toán' || inv.status === 'Quá hạn';
     if (activeFilter === 'paid') return inv.status === 'Đã thanh toán';
     return true;

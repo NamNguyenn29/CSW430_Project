@@ -41,13 +41,16 @@ export const RequestDetailScreen = () => {
         { text: 'Hủy', style: 'cancel' },
         {
           text: 'Xác nhận',
-          onPress: () => {
+          onPress: async () => {
             setIsProcessing(true);
-            setTimeout(() => {
-              setIsProcessing(false);
-              updateRequestStatus(request.id, newStatus, note);
+            try {
+              await updateRequestStatus(request.id, newStatus, note);
               Alert.alert('Thành công', `Yêu cầu đã được chuyển sang trạng thái: ${newStatus}`);
-            }, 800);
+            } catch (err: any) {
+              Alert.alert('Lỗi', err || 'Không thể cập nhật trạng thái yêu cầu.');
+            } finally {
+              setIsProcessing(false);
+            }
           }
         }
       ]

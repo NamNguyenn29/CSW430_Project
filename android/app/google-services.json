@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "50811060653",
+    "project_id": "dormly-9df06",
+    "storage_bucket": "dormly-9df06.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:50811060653:android:53aca0533932ec18af2124",
+        "android_client_info": {
+          "package_name": "com.dormitorymanager"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "50811060653-3v0hmpqe6mflb61446r2ncm5hh31msib.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.dormitorymanager",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "50811060653-tgb6hu59arrnlrcp4rft98l8p39lpc94.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.dormitorymanager",
+            "certificate_hash": "90500e62db150fbc8a16aef3106254cc3fa2eb7f"
+          }
+        },
+        {
+          "client_id": "50811060653-odguomj2vlqdlomb3o9grckt1hjovno2.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA1PFeeEVEGgmwxsOssEZaesCzNI5ZoKH8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "50811060653-odguomj2vlqdlomb3o9grckt1hjovno2.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

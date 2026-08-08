@@ -1,4 +1,5 @@
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import { Alert } from 'react-native';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../store';
 import { loginUser, logoutUser, setRole, loadUserSession } from '../store/authSlice';
@@ -146,14 +147,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [reduxUser, reduxRole, dispatch]);
 
   const navigate = (screen: string, params?: any) => {
-    // Role-based route guards
-    if (reduxRole === 'student' && screen.startsWith('Admin')) {
-      console.warn(`Access blocked: Student cannot navigate to admin screen: ${screen}`);
-      return;
-    }
-    if (reduxRole === 'manager' && screen.startsWith('Student')) {
-      console.warn(`Access blocked: Manager cannot navigate to student screen: ${screen}`);
-      return;
+    // Role-based route guards (do not block when navigating from auth flow screens)
+    const isAuthFlow = ['Welcome', 'Login', 'Register', 'ForgotPassword'].includes(currentScreen);
+    if (!isAuthFlow) {
+      if (reduxRole === 'student' && screen.startsWith('Admin')) {
+        console.warn(`Access blocked: Student cannot navigate to admin screen: ${screen}`);
+        return;
+      }
+      if (reduxRole === 'manager' && screen.startsWith('Student')) {
+        console.warn(`Access blocked: Manager cannot navigate to student screen: ${screen}`);
+        return;
+      }
     }
 
     setNavigationStack(prev => [...prev, { screen, params }]);
@@ -236,16 +240,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     })).unwrap();
   };
 
-  const updateRequestStatusAction = (reqId: string, status: any, note: string) => {
+  const updateRequestStatusAction = async (reqId: string, status: any, note: string) => {
     let apiStatus: 'IN_PROGRESS' | 'RESOLVED' = 'IN_PROGRESS';
     if (status === 'Đã giải quyết' || status === 'RESOLVED') {
       apiStatus = 'RESOLVED';
     }
-    dispatch(updateTicketStatus({
+    return await dispatch(updateTicketStatus({
       ticketId: reqId,
       status: apiStatus,
       answer: note,
-    }));
+    })).unwrap();
   };
 
   const payInvoice = (invoiceId: string) => {
@@ -255,21 +259,72 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const addInvoice = async (roomId: string, rentFee: number, electricityFee: number, waterFee: number, serviceFee: number, month: string) => {
     try {
       // Find room assignment for this room to link invoice correctly on backend
-      const res = await api.get('/api/room-assignments/assign-auto', {
-        params: { roomId }
+      const assignmentsRes = await api.get('/api/room-assignments');
+      const assignments = assignmentsRes.data.result || [];
+      const now = new Date();
+      const activeAssignment = assignments.find((a: any) => {
+        if (!a.roomNodeId) return false;
+        if (a.roomNodeId.toString().toLowerCase() !== roomId.toString().toLowerCase()) return false;
+        const start = a.startDate ? new Date(a.startDate) : null;
+        if (start && start > now) return false;
+        const end = a.endDate ? new Date(a.endDate) : null;
+        if (end && end < now) return false;
+        return true;
       });
-      const roomAssignmentId = res.data.result.id;
+      if (!activeAssignment) {
+        Alert.alert('Lỗi', 'Không tìm thấy sinh viên đang ở phòng này.');
+        return;
+      }
+      const roomAssignmentId = activeAssignment.id;
 
-      await api.post('/api/invoices', {
-        roomAssignmentId,
-        feeCategory: 'ROOM_RENT',
-        amount: rentFee,
-        month,
-        notes: 'Tiền phòng',
-      });
+      // Create Rent Invoice
+      if (rentFee > 0) {
+        await api.post('/api/invoices', {
+          roomAssignmentId,
+          feeCategory: 'ROOM_RENT',
+          amount: rentFee,
+          month,
+          notes: 'Tiền phòng',
+        });
+      }
+
+      // Create Electricity Invoice
+      if (electricityFee > 0) {
+        await api.post('/api/invoices', {
+          roomAssignmentId,
+          feeCategory: 'ELECTRICITY',
+          amount: electricityFee,
+          month,
+          notes: 'Tiền điện',
+        });
+      }
+
+      // Create Water Invoice
+      if (waterFee > 0) {
+        await api.post('/api/invoices', {
+          roomAssignmentId,
+          feeCategory: 'WATER',
+          amount: waterFee,
+          month,
+          notes: 'Tiền nước',
+        });
+      }
+
+      // Create Service Invoice
+      if (serviceFee > 0) {
+        await api.post('/api/invoices', {
+          roomAssignmentId,
+          feeCategory: 'SERVICE',
+          amount: serviceFee,
+          month,
+          notes: 'Phí dịch vụ',
+        });
+      }
+
       dispatch(fetchInvoices());
-    } catch (e) {
+    } catch (e: any) {
       console.warn('Failed to add invoice to backend', e);
+      Alert.alert('Lỗi', 'Không thể lập hóa đơn: ' + (e.response?.data?.message || e.message));
     }
   };
 
@@ -347,6 +402,28 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const ticketRoomId = ticket.buildingNodeId || reduxRoom?.roomNodeId;
     const ticketRoom = ticketRoomId ? mappedRooms.find(r => r.id === ticketRoomId.toString()) : null;
 
+    const logs = [
+      {
+        status: 'Chờ xử lý',
+        date: ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString('vi-VN') : 'Gần đây',
+        note: 'Sự cố đã được gửi lên hệ thống.',
+      }
+    ];
+    if (ticket.status === 'IN_PROGRESS' || ticket.status === 'RESOLVED') {
+      logs.push({
+        status: 'Đang xử lý',
+        date: 'Gần đây',
+        note: 'Đang tiến hành xử lý.',
+      });
+    }
+    if (ticket.status === 'RESOLVED') {
+      logs.push({
+        status: 'Đã giải quyết',
+        date: ticket.resolvedAt ? new Date(ticket.resolvedAt).toLocaleDateString('vi-VN') : 'Gần đây',
+        note: ticket.resolutionNote || 'Sự cố đã được giải quyết.',
+      });
+    }
+
     return {
       id: ticket.id?.toString() || `t-${Date.now()}`,
       roomId: ticketRoomId?.toString() || '',
@@ -358,9 +435,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       priority: 'Trung bình',
       status: statusText,
       createdAt: ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString('vi-VN') : 'Gần đây',
-      answer: ticket.answer,
+      answer: ticket.resolutionNote || ticket.answer,
       reporter: reduxUser?.fullName || 'Sinh viên',
-      logs: [],
+      logs,
     };
   });
 

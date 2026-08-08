@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,10 +7,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
-  Modal,
-  ActivityIndicator,
 } from 'react-native';
-import { WebView } from 'react-native-webview';
 import { useDispatch, useSelector } from 'react-redux';
 import { useApp } from '../../context/AppContext';
 import { Button } from '../../components/Button';
@@ -18,9 +15,10 @@ import { Input } from '../../components/Input';
 import { Icon } from '../../components/Icon';
 import { COLORS, SIZES, SPACING } from '../../theme/theme';
 import { AppDispatch, RootState } from '../../store';
-import { loginUser, loginWithOAuth2 } from '../../store/authSlice';
-import { API_BASE_URL, OAUTH2_CALLBACK_URL } from '../../config';
+import { loginUser, loginWithFirebase } from '../../store/authSlice';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { getAuth, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
 
 export const LoginScreen = () => {
   const { theme, navigate } = useApp();
@@ -32,13 +30,9 @@ export const LoginScreen = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
+
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
-
-  // OAuth2 states
-  const [showOAuthModal, setShowOAuthModal] = useState(false);
-  const [webViewLoading, setWebViewLoading] = useState(false);
 
   const handleLogin = () => {
     let hasError = false;
@@ -83,28 +77,51 @@ export const LoginScreen = () => {
       });
   };
 
-  const handleWebViewNavigation = (navState: any) => {
-    // Intercept when backend redirects to front-end callback url
-    if (navState.url.startsWith(OAUTH2_CALLBACK_URL)) {
-      setShowOAuthModal(false);
-      
-      // Request Redux to call the exchange token endpoint
-      dispatch(loginWithOAuth2())
-        .unwrap()
-        .then((data) => {
-          Alert.alert(
-            'Đăng nhập thành công',
-            `Chào mừng ${data.user.fullName} đăng nhập bằng Google!`
-          );
-          if (data.role === 'manager') {
-            navigate('AdminHome');
-          } else {
-            navigate('StudentHome');
-          }
-        })
-        .catch((err) => {
-          Alert.alert('Đăng nhập với Google thất bại', err || 'Đăng nhập Google thất bại');
-        });
+  useEffect(() => {
+    GoogleSignin.configure({
+      // Lấy từ GCP Console hoặc google-services.json (client_type: 3)
+      webClientId: '50811060653-odguomj2vlqdlomb3o9grckt1hjovno2.apps.googleusercontent.com',
+      offlineAccess: true,
+    });
+  }, []);
+
+  const handleGoogleLogin = async () => {
+    try {
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const response = await GoogleSignin.signIn();
+
+      if (response.type === 'success') {
+        const idToken = response.data.idToken;
+        if (!idToken) throw new Error('Không nhận được token từ Google');
+
+        const authInstance = getAuth();
+        const googleCredential = GoogleAuthProvider.credential(idToken);
+        const userCredential = await signInWithCredential(authInstance, googleCredential);
+        const firebaseIdToken = await userCredential.user.getIdToken();
+
+        dispatch(loginWithFirebase(firebaseIdToken))
+          .unwrap()
+          .then((data) => {
+            Alert.alert(
+              'Đăng nhập thành công',
+              `Chào mừng ${data.user.fullName} đăng nhập bằng Google Firebase!`
+            );
+            if (data.role === 'manager') {
+              navigate('AdminHome');
+            } else {
+              navigate('StudentHome');
+            }
+          })
+          .catch((err) => {
+            Alert.alert('Đăng nhập thất bại', err || 'Đăng nhập Google thất bại');
+          });
+      } else {
+        console.log('Google Sign-In cancelled');
+      }
+    } catch (err: any) {
+      if (err.code !== 'SIGN_IN_CANCELLED') {
+        Alert.alert('Đăng nhập Google thất bại', err.message || 'Lỗi không xác định');
+      }
     }
   };
 
@@ -175,7 +192,7 @@ export const LoginScreen = () => {
           {/* Google Login Button */}
           <TouchableOpacity
             style={[styles.googleBtn, { borderColor: colors.border, backgroundColor: colors.surface }]}
-            onPress={() => setShowOAuthModal(true)}
+            onPress={handleGoogleLogin}
           >
             <Icon name="globe" color="#EA4335" size={18} />
             <Text style={[styles.googleBtnText, { color: colors.text }]}>Đăng nhập với Google</Text>
@@ -189,43 +206,6 @@ export const LoginScreen = () => {
           </View>
         </View>
       </ScrollView>
-
-      {/* Google Login WebView Modal */}
-      <Modal
-        visible={showOAuthModal}
-        animationType="slide"
-        onRequestClose={() => setShowOAuthModal(false)}
-      >
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-          <View style={[styles.modalHeader, { borderBottomColor: colors.border, paddingTop: insets.top, height: 52 + insets.top }]}>
-            <TouchableOpacity onPress={() => setShowOAuthModal(false)} style={styles.modalCloseBtn}>
-              <Icon name="back" color={colors.text} size={22} />
-              <Text style={[styles.modalCloseText, { color: colors.text }]}>Đóng</Text>
-            </TouchableOpacity>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Đăng nhập Google</Text>
-            <View style={{ width: 60 }} />
-          </View>
-
-          <View style={{ flex: 1, position: 'relative' }}>
-            <WebView
-              source={{ uri: `${API_BASE_URL}/oauth2/authorization/google` }}
-              onNavigationStateChange={handleWebViewNavigation}
-              onLoadStart={() => setWebViewLoading(true)}
-              onLoadEnd={() => setWebViewLoading(false)}
-              sharedCookiesEnabled={true}
-              thirdPartyCookiesEnabled={true}
-              domStorageEnabled={true}
-              javaScriptEnabled={true}
-            />
-            {webViewLoading && (
-              <View style={[styles.loaderContainer, { backgroundColor: colors.background }]}>
-                <ActivityIndicator size="large" color={colors.primary} />
-                <Text style={[styles.loaderText, { color: colors.textSecondary }]}>Đang kết nối tới Google...</Text>
-              </View>
-            )}
-          </View>
-        </SafeAreaView>
-      </Modal>
     </SafeAreaView>
   );
 };

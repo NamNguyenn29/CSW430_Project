@@ -105,6 +105,45 @@ export const loginWithOAuth2 = createAsyncThunk(
   }
 );
 
+export const loginWithFirebase = createAsyncThunk(
+  'auth/loginFirebase',
+  async (idToken: string, { rejectWithValue }) => {
+    try {
+      const response = await api.post('/api/v1/auth/firebase', { token: idToken });
+      const accessToken = response.data.result.accessToken;
+      await AsyncStorage.setItem('accessToken', accessToken);
+      
+      const decoded = decodeJwt(accessToken);
+      if (!decoded) throw new Error('Token định dạng không hợp lệ');
+
+      const userId = decoded.id;
+      const roles: string[] = decoded.roles || [];
+      const isManager = roles.some(r => r === 'ROLE_ADMIN' || r === 'ROLE_Manager' || r === 'manager');
+      const role = isManager ? 'manager' : 'student';
+
+      await AsyncStorage.setItem('role', role);
+
+      const userRes = await api.get(`/api/users/${userId}`);
+      const user = userRes.data.result;
+
+      let studentProfile = null;
+      if (role === 'student') {
+        try {
+          const profileRes = await api.get('/api/users/profile/student-profile');
+          studentProfile = profileRes.data.result;
+        } catch (profileError) {
+          console.warn('Failed to fetch student profile:', profileError);
+        }
+      }
+
+      return { accessToken, user, role, studentProfile };
+    } catch (error: any) {
+      const message = error.response?.data?.message || error.message || 'Đăng nhập Firebase thất bại';
+      return rejectWithValue(message);
+    }
+  }
+);
+
 export const loadUserSession = createAsyncThunk(
   'auth/loadSession',
   async (_, { rejectWithValue }) => {
@@ -216,6 +255,23 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
       })
       .addCase(loginWithOAuth2.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+      })
+      // Firebase Login
+      .addCase(loginWithFirebase.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(loginWithFirebase.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.accessToken = action.payload.accessToken;
+        state.currentUser = action.payload.user;
+        state.currentRole = action.payload.role as any;
+        state.studentProfile = action.payload.studentProfile;
+        state.isAuthenticated = true;
+      })
+      .addCase(loginWithFirebase.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
       })

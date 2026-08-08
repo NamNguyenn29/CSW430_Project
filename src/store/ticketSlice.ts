@@ -38,8 +38,7 @@ export const createTicket = createAsyncThunk(
         description: payload.description,
         category: payload.category,
       });
-      const dataBlob = new Blob([jsonStr], { type: 'application/json', lastModified: Date.now() });
-      formData.append('data', dataBlob as any);
+      formData.append('data', jsonStr);
 
       const response = await api.post('/api/users/me/tickets', formData, {
         headers: {
@@ -72,7 +71,7 @@ export const updateTicketStatus = createAsyncThunk(
     try {
       const response = await api.patch(`/api/tickets/${payload.ticketId}/status`, {
         status: payload.status,
-        answer: payload.answer,
+        resolutionNote: payload.answer,
       });
       dispatch(fetchAllTickets());
       return response.data.result;

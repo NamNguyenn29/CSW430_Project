@@ -18,8 +18,8 @@ export const StudentRequestListScreen = () => {
   const { theme, currentUser, requests, navigate } = useApp();
   const colors = COLORS[theme];
 
-  // Get user's own room requests
-  const myRequests = requests.filter(r => r.roomId === currentUser.roomId);
+  // Get user's own room requests (already filtered by user on backend)
+  const myRequests = requests;
 
   const getStatusColor = (status: string) => {
     switch (status) {
