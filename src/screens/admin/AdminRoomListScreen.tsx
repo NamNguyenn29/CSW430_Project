@@ -8,7 +8,6 @@ import {
   SafeAreaView,
   Modal,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/Card';
@@ -18,14 +17,14 @@ import { Input } from '../../components/Input';
 import { Icon } from '../../components/Icon';
 import { Button } from '../../components/Button';
 import { COLORS, SIZES, SPACING } from '../../theme/theme';
+import { t, formatRoomTitle } from '../../i18n/translations';
 
 export const AdminRoomListScreen = () => {
-  const { theme, rooms, createNode, navigate } = useApp();
+  const { theme, language, rooms, createNode, navigate } = useApp();
   const colors = COLORS[theme];
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBlock, setSelectedBlock] = useState<'All' | 'Tòa A1' | 'Tòa A2' | 'Tòa B1'>('All');
-  const [selectedFilterStatus, setSelectedFilterStatus] = useState<'All' | 'Còn chỗ' | 'Đã đầy' | 'Bảo trì'>('All');
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
@@ -34,7 +33,7 @@ export const AdminRoomListScreen = () => {
 
   const handleAddRoom = async () => {
     if (!newRoomName.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập tên phòng.');
+      Alert.alert(t('error', language), language === 'en' ? 'Please enter room name.' : 'Vui lòng nhập tên phòng.');
       return;
     }
     setIsAdding(true);
@@ -49,39 +48,36 @@ export const AdminRoomListScreen = () => {
         maxCapacity: 4,
         nodeTypeId: '44444444-4444-4444-4444-444444444444',
         parentId,
-        status: 'ENABLE',
       };
-      
+
       await createNode(payload);
-      Alert.alert('Thành công', `Đã thêm phòng ${newRoomName.trim()} thành công!`);
+      Alert.alert(t('success', language), language === 'en' ? 'New room added successfully!' : 'Đã thêm phòng mới thành công!');
       setShowAddModal(false);
       setNewRoomName('');
     } catch (e: any) {
-      Alert.alert('Thất bại', e.message || 'Không thể thêm phòng mới.');
+      Alert.alert(t('error', language), e.message || 'Không thể tạo phòng mới.');
     } finally {
       setIsAdding(false);
     }
   };
 
-  const blocks = ['All', 'Tòa A1', 'Tòa A2', 'Tòa B1'];
-  const statuses = ['All', 'Còn chỗ', 'Đã đầy', 'Bảo trì'];
+  const dynamicBlocks = Array.from(new Set(rooms.map(r => r.block).filter(Boolean)));
+  const blocks = ['All', ...dynamicBlocks];
 
+  // Filter rooms
   const filteredRooms = rooms.filter(room => {
-    const matchesSearch =
-      room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      room.block.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesBlock = selectedBlock === 'All' || room.block === selectedBlock;
-    const matchesStatus = selectedFilterStatus === 'All' || room.status === selectedFilterStatus;
-
-    return matchesSearch && matchesBlock && matchesStatus;
+    const matchSearch = room.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        room.block.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchBlock = selectedBlock === 'All' || room.block === selectedBlock;
+    return matchSearch && matchBlock;
   });
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Còn chỗ':
         return colors.success;
-      case 'Đã đầy':
-        return colors.danger;
+      case 'Đầy':
+        return colors.primary;
       case 'Bảo trì':
         return colors.warning;
       default:
@@ -91,12 +87,12 @@ export const AdminRoomListScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title="Quản Lý Phòng KTX" />
+      <Header title={t('roomList', language)} showBack />
       
       {/* Search & Filter Header */}
       <View style={[styles.searchFilterContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <Input
-          placeholder="Tìm theo tên phòng, tòa nhà..."
+          placeholder={t('searchRoomPlaceholder', language)}
           value={searchQuery}
           onChangeText={setSearchQuery}
           icon="search"
@@ -120,7 +116,7 @@ export const AdminRoomListScreen = () => {
                 { color: colors.text },
                 selectedBlock === block && { color: '#FFFFFF' }
               ]}>
-                {block === 'All' ? 'Tất cả tòa' : block}
+                {block === 'All' ? (language === 'en' ? 'All Buildings' : 'Tất cả tòa') : block}
               </Text>
             </TouchableOpacity>
           ))}
@@ -129,26 +125,23 @@ export const AdminRoomListScreen = () => {
 
       {/* Add New Room Button */}
       <Button
-        title="Thêm Phòng Ở Mới"
+        title={t('addRoom', language)}
         onPress={() => setShowAddModal(true)}
         variant="primary"
-        icon="➕"
+        icon="plus"
         style={{ marginHorizontal: SPACING.md, marginTop: SPACING.sm }}
       />
 
       {/* Main List */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={[styles.listHeaderTitle, { color: colors.text }]}>
-          Danh sách phòng ({filteredRooms.length})
+          {language === 'en' ? `Room List (${filteredRooms.length})` : `Danh sách phòng (${filteredRooms.length})`}
         </Text>
         
         {filteredRooms.length === 0 ? (
           <Card style={styles.emptyCard}>
-            <BadgeIcon name="room" color={colors.textSecondary} size={44} style={{ marginBottom: SPACING.md }} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>Không tìm thấy phòng phù hợp</Text>
-            <Text style={[styles.emptyDesc, { color: colors.textSecondary }]}>
-              Vui lòng thay đổi từ khóa tìm kiếm hoặc bộ lọc.
-            </Text>
+            <Icon name="inbox" size={44} color={colors.textSecondary} style={{ marginBottom: SPACING.md }} />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>{language === 'en' ? 'No matching rooms found' : 'Không tìm thấy phòng phù hợp'}</Text>
           </Card>
         ) : (
           filteredRooms.map(room => (
@@ -158,28 +151,19 @@ export const AdminRoomListScreen = () => {
               onPress={() => navigate('AdminRoomDetail', { roomId: room.id })}
             >
               <View style={styles.roomRow}>
+                <BadgeIcon name="room" color={colors.primary} size={36} />
                 <View style={styles.roomInfo}>
-                  <Text style={[styles.roomNameText, { color: colors.text }]}>{room.name}</Text>
-                  <Text style={[styles.roomSubText, { color: colors.textSecondary }]}>
-                    {room.block} | Loại: {room.type}
+                  <Text style={[styles.roomTitle, { color: colors.text }]}>
+                    {formatRoomTitle(room.name, language)} {room.block ? `(${room.block})` : ''}
                   </Text>
-                  <Text style={[styles.roomPriceText, { color: colors.primary }]}>
-                    {room.price.toLocaleString('vi-VN')} đ/tháng
+                  <Text style={[styles.roomSub, { color: colors.textSecondary }]}>
+                    {room.floor ? `${room.floor} • ` : ''}{t('members', language)}: {room.occupied} / {room.capacity}
                   </Text>
                 </View>
-
-                <View style={styles.rightInfo}>
-                  <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(room.status)}15` }]}>
-                    <Text style={[styles.statusText, { color: getStatusColor(room.status) }]}>
-                      {room.status}
-                    </Text>
-                  </View>
-                  <View style={styles.occupantRow}>
-                    <Icon name="users" color={colors.textSecondary} size={13} style={{ marginRight: 4 }} />
-                    <Text style={[styles.occupantText, { color: colors.text }]}>
-                      {room.occupied} / {room.capacity}
-                    </Text>
-                  </View>
+                <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(room.status)}15` }]}>
+                  <Text style={[styles.statusText, { color: getStatusColor(room.status) }]}>
+                    {room.status}
+                  </Text>
                 </View>
               </View>
             </Card>
@@ -190,48 +174,50 @@ export const AdminRoomListScreen = () => {
       {/* Add Room Modal */}
       <Modal
         visible={showAddModal}
-        animationType="fade"
+        animationType="slide"
         transparent
         onRequestClose={() => setShowAddModal(false)}
       >
         <View style={styles.modalOverlay}>
           <Card style={[styles.modalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Thêm Phòng Ở Mới</Text>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{t('addRoom', language)}</Text>
             
             <Input
-              label="Tên phòng (Ví dụ: P.104)"
-              placeholder="Nhập tên phòng"
+              label={language === 'en' ? 'Room Name (e.g. Room 304)' : 'Tên phòng (Ví dụ: Phòng 304)'}
+              placeholder="Phòng 304"
               value={newRoomName}
               onChangeText={setNewRoomName}
               icon="room"
-              containerStyle={{ marginVertical: SPACING.sm }}
             />
 
-            <Text style={[styles.label, { color: colors.textSecondary, marginBottom: 4 }]}>Chọn Tầng / Tòa nhà</Text>
-            <View style={styles.floorSelectorContainer}>
-              <TouchableOpacity
-                style={[styles.floorOption, selectedFloor === 'Floor 1' && { backgroundColor: colors.primary }]}
-                onPress={() => setSelectedFloor('Floor 1')}
-              >
-                <Text style={[styles.floorText, selectedFloor === 'Floor 1' ? { color: '#FFF' } : { color: colors.text }]}>Tầng 1 (Tòa A1)</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.floorOption, { marginLeft: SPACING.sm }, selectedFloor === 'Floor 2' && { backgroundColor: colors.primary }]}
-                onPress={() => setSelectedFloor('Floor 2')}
-              >
-                <Text style={[styles.floorText, selectedFloor === 'Floor 2' ? { color: '#FFF' } : { color: colors.text }]}>Tầng 2 (Tòa A1)</Text>
-              </TouchableOpacity>
+            <Text style={[styles.floorSelectLabel, { color: colors.textSecondary }]}>{language === 'en' ? 'Select Floor' : 'Chọn Tầng / Vị trí'}</Text>
+            <View style={styles.floorSelectorRow}>
+              {['Floor 1', 'Floor 2'].map(fl => (
+                <TouchableOpacity
+                  key={fl}
+                  style={[
+                    styles.floorOption,
+                    { borderColor: colors.border },
+                    selectedFloor === fl && { backgroundColor: colors.primary, borderColor: colors.primary }
+                  ]}
+                  onPress={() => setSelectedFloor(fl)}
+                >
+                  <Text style={[styles.floorOptionText, selectedFloor === fl ? { color: '#FFF' } : { color: colors.text }]}>
+                    {fl === 'Floor 1' ? (language === 'en' ? 'Floor 1 (Building A1)' : 'Tầng 1 (Tòa A1)') : (language === 'en' ? 'Floor 2 (Building A1)' : 'Tầng 2 (Tòa A1)')}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </View>
 
-            <View style={styles.modalActionRow}>
+            <View style={styles.modalBtnRow}>
               <Button
-                title="Hủy"
+                title={t('cancel', language)}
                 onPress={() => setShowAddModal(false)}
                 variant="outline"
                 style={{ flex: 1, marginRight: SPACING.sm }}
               />
               <Button
-                title="Thêm mới"
+                title={t('save', language)}
                 onPress={handleAddRoom}
                 loading={isAdding}
                 variant="primary"
@@ -250,19 +236,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   searchFilterContainer: {
-    padding: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.xs,
+    paddingBottom: SPACING.xs,
     borderBottomWidth: 1,
   },
   chipScrollView: {
     flexDirection: 'row',
-    marginTop: SPACING.xs,
+    marginVertical: SPACING.xs,
   },
   filterChip: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: SIZES.radiusSm,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 1,
-    marginRight: SPACING.xs,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
   },
   filterChipText: {
     fontSize: SIZES.fontXs,
@@ -274,67 +264,45 @@ const styles = StyleSheet.create({
   },
   listHeaderTitle: {
     fontSize: SIZES.fontMd,
-    fontWeight: '700',
-    marginBottom: SPACING.sm,
+    fontWeight: 'bold',
+    marginBottom: SPACING.xs,
   },
   emptyCard: {
     alignItems: 'center',
     padding: SPACING.xl,
-    marginTop: SPACING.md,
+    marginTop: SPACING.xl,
   },
   emptyTitle: {
-    fontSize: SIZES.fontLg,
-    fontWeight: '700',
-    marginBottom: SPACING.xs,
-  },
-  emptyDesc: {
-    fontSize: SIZES.fontSm,
-    textAlign: 'center',
+    fontSize: SIZES.fontMd,
+    fontWeight: 'bold',
   },
   roomCard: {
-    marginBottom: SPACING.xs,
+    marginVertical: 4,
   },
   roomRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
   roomInfo: {
     flex: 1,
+    marginLeft: SPACING.sm,
   },
-  roomNameText: {
-    fontSize: SIZES.fontLg,
-    fontWeight: '700',
+  roomTitle: {
+    fontSize: SIZES.fontMd,
+    fontWeight: 'bold',
   },
-  roomSubText: {
+  roomSub: {
     fontSize: SIZES.fontXs,
     marginTop: 2,
   },
-  roomPriceText: {
-    fontSize: SIZES.fontSm,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-  rightInfo: {
-    alignItems: 'flex-end',
-  },
   statusBadge: {
+    paddingVertical: 4,
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: SIZES.radiusSm,
-    marginBottom: 6,
+    borderRadius: 8,
   },
   statusText: {
-    fontSize: SIZES.fontXs,
-    fontWeight: '700',
-  },
-  occupantRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  occupantText: {
-    fontSize: SIZES.fontXs,
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   modalOverlay: {
     flex: 1,
@@ -346,37 +314,37 @@ const styles = StyleSheet.create({
   modalCard: {
     width: '100%',
     padding: SPACING.lg,
-    borderRadius: SIZES.radiusLg,
   },
   modalTitle: {
     fontSize: SIZES.fontLg,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: SPACING.sm,
-  },
-  label: {
-    fontSize: SIZES.fontXs,
-    fontWeight: 'bold',
-  },
-  floorSelectorContainer: {
-    flexDirection: 'row',
-    width: '100%',
     marginBottom: SPACING.md,
+  },
+  floorSelectLabel: {
+    fontSize: SIZES.fontXs,
+    fontWeight: '600',
+    marginTop: SPACING.sm,
+    marginBottom: 4,
+  },
+  floorSelectorRow: {
+    flexDirection: 'row',
+    marginBottom: SPACING.lg,
   },
   floorOption: {
     flex: 1,
     paddingVertical: SPACING.sm,
-    borderRadius: SIZES.radiusMd,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignItems: 'center',
+    borderRadius: SIZES.radiusSm,
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 6,
   },
-  floorText: {
-    fontSize: SIZES.fontXs,
-    fontWeight: 'bold',
+  floorOptionText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
-  modalActionRow: {
+  modalBtnRow: {
     flexDirection: 'row',
     width: '100%',
   },

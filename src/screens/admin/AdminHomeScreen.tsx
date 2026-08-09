@@ -17,9 +17,10 @@ import { Input } from '../../components/Input';
 import { Button } from '../../components/Button';
 import { Icon } from '../../components/Icon';
 import { COLORS, SIZES, SPACING } from '../../theme/theme';
+import { t, formatRoomTitle } from '../../i18n/translations';
 
 export const AdminHomeScreen = () => {
-  const { theme, students, rooms, invoices, requests, auditLogs, notificationLogs, addAnnouncement, navigate } = useApp();
+  const { theme, language, students, rooms, invoices, requests, auditLogs, notificationLogs, addAnnouncement, navigate } = useApp();
   const colors = COLORS[theme];
 
   const formatAuditLog = (log: any) => {
@@ -27,19 +28,19 @@ export const AdminHomeScreen = () => {
     let actionLabel = log.action || '';
     let actionColor = colors.primary;
     if (log.action === 'CREATE') {
-      actionLabel = 'THÊM MỚI';
+      actionLabel = language === 'en' ? 'CREATE' : 'THÊM MỚI';
       actionColor = colors.success;
     } else if (log.action === 'UPDATE') {
-      actionLabel = 'CẬP NHẬT';
+      actionLabel = language === 'en' ? 'UPDATE' : 'CẬP NHẬT';
       actionColor = colors.warning;
     } else if (log.action === 'DELETE') {
-      actionLabel = 'XÓA BỎ';
+      actionLabel = language === 'en' ? 'DELETE' : 'XÓA BỎ';
       actionColor = colors.danger;
     } else if (log.action === 'READ') {
-      actionLabel = 'TRUY XUẤT';
+      actionLabel = language === 'en' ? 'QUERY' : 'TRUY XUẤT';
       actionColor = '#60A5FA';
-    } else if (log.action === 'LOGIN') {
-      actionLabel = 'ĐĂNG NHẬP';
+    } else if (log.action === 'LOGIN' || log.action === 'LOGINWITHFIREBASE') {
+      actionLabel = language === 'en' ? 'LOGIN' : 'ĐĂNG NHẬP';
       actionColor = '#818CF8';
     } else {
       actionLabel = actionLabel.toUpperCase();
@@ -47,48 +48,51 @@ export const AdminHomeScreen = () => {
 
     // Translate entity type
     let entityLabel = log.entityType || '';
-    if (log.entityType === 'AUTH') entityLabel = 'Tài khoản';
-    else if (log.entityType === 'TICKET' || log.entityType === 'TICKETME' || log.entityType === 'TICKETADMIN') entityLabel = 'Sự cố';
-    else if (log.entityType === 'TICKETCOMMENT') entityLabel = 'Bình luận sự cố';
-    else if (log.entityType === 'TICKETATTACHMENT') entityLabel = 'Ảnh đính kèm';
-    else if (log.entityType === 'INVOICE') entityLabel = 'Hóa đơn';
-    else if (log.entityType === 'ROOMASSIGNMENT') entityLabel = 'Xếp phòng';
-    else if (log.entityType === 'BUILDINGNODE') entityLabel = 'Sơ đồ phòng/tòa';
-    else if (log.entityType === 'USER') entityLabel = 'Người dùng';
-    else if (log.entityType === 'ANNOUNCEMENT') entityLabel = 'Thông báo';
+    if (log.entityType === 'AUTH') entityLabel = language === 'en' ? 'Account' : 'Tài khoản';
+    else if (log.entityType === 'TICKET' || log.entityType === 'TICKETME' || log.entityType === 'TICKETADMIN') entityLabel = language === 'en' ? 'Incident Ticket' : 'Sự cố';
+    else if (log.entityType === 'TICKETCOMMENT') entityLabel = language === 'en' ? 'Ticket Comment' : 'Bình luận sự cố';
+    else if (log.entityType === 'TICKETATTACHMENT') entityLabel = language === 'en' ? 'Attachment' : 'Ảnh đính kèm';
+    else if (log.entityType === 'INVOICE') entityLabel = language === 'en' ? 'Invoice' : 'Hóa đơn';
+    else if (log.entityType === 'ROOMASSIGNMENT') entityLabel = language === 'en' ? 'Room Assignment' : 'Xếp phòng';
+    else if (log.entityType === 'BUILDINGNODE') entityLabel = language === 'en' ? 'Floor/Room Node' : 'Sơ đồ phòng/tòa';
+    else if (log.entityType === 'USER') entityLabel = language === 'en' ? 'User' : 'Người dùng';
+    else if (log.entityType === 'ANNOUNCEMENT') entityLabel = language === 'en' ? 'Announcement' : 'Thông báo';
 
     // Best-effort find user name who did the action
-    let executor = 'Hệ thống / Guest';
+    let executor = language === 'en' ? 'System / Guest' : 'Hệ thống / Guest';
     if (log.userFullName) {
       executor = log.userFullName;
     } else if (log.userId) {
-      // Find in local students list
       const matched = students.find((s: any) => s.id === log.userId);
       if (matched) {
         executor = (matched as any).name || (matched as any).fullName;
       } else {
-        executor = `Người dùng (ID: ${log.userId.substring(0, 8)}...)`;
+        executor = language === 'en' ? `User (${log.userId.substring(0, 8)}...)` : `Người dùng (${log.userId.substring(0, 8)}...)`;
       }
     }
 
     // Try parsing newValues/oldValues for rich details
     let details = '';
     try {
-      if (log.newValues) {
+      if (log.action === 'LOGIN' || log.action === 'LOGINWITHFIREBASE') {
+        details = language === 'en' ? 'User account authenticated successfully' : 'Đăng nhập phiên làm việc tài khoản thành công';
+      } else if (log.newValues) {
         const newVal = JSON.parse(log.newValues);
         if (log.entityType === 'INVOICE') {
-          details = `Lập hóa đơn ${newVal.month || ''} phòng ${newVal.roomName || ''} - ${newVal.amount ? newVal.amount.toLocaleString('vi-VN') + 'đ' : ''}`;
+          details = language === 'en' 
+            ? `Created invoice ${newVal.month || ''} for ${formatRoomTitle(newVal.roomName || '', language)}`
+            : `Lập hóa đơn ${newVal.month || ''} phòng ${newVal.roomName || ''} - ${newVal.amount ? newVal.amount.toLocaleString('vi-VN') + 'đ' : ''}`;
         } else if (log.entityType === 'ANNOUNCEMENT') {
-          details = `Đăng thông báo: "${newVal.title || ''}"`;
+          details = language === 'en' ? `Published notice: "${newVal.title || ''}"` : `Đăng thông báo: "${newVal.title || ''}"`;
         } else if (log.entityType === 'TICKET' || log.entityType === 'TICKETME' || log.entityType === 'TICKETADMIN') {
-          details = `Sự cố: "${newVal.title || ''}" - Trạng thái: ${newVal.status || ''}`;
+          details = language === 'en' ? `Incident: "${newVal.title || ''}" - Status: ${newVal.status || ''}` : `Sự cố: "${newVal.title || ''}" - Trạng thái: ${newVal.status || ''}`;
         } else if (log.entityType === 'ROOMASSIGNMENT') {
-          details = `Gán sinh viên vào phòng ${newVal.roomName || ''}`;
+          details = language === 'en' ? `Assigned resident to ${formatRoomTitle(newVal.roomName || '', language)}` : `Gán sinh viên vào phòng ${newVal.roomName || ''}`;
         }
       } else if (log.oldValues) {
         const oldVal = JSON.parse(log.oldValues);
         if (log.entityType === 'USER' && log.action === 'UPDATE_PASSWORD') {
-          details = `Đổi mật khẩu người dùng ${oldVal.fullName || oldVal.email || ''}`;
+          details = language === 'en' ? `Password updated for ${oldVal.fullName || oldVal.email || 'user'}` : `Đổi mật khẩu người dùng ${oldVal.fullName || oldVal.email || ''}`;
         }
       }
     } catch (e) {
@@ -97,7 +101,9 @@ export const AdminHomeScreen = () => {
 
     // Fallback details if empty
     if (!details) {
-      details = `Thao tác trên đối tượng ${entityLabel} (ID: ${log.entityId ? log.entityId.substring(0, 8) + '...' : 'N/A'})`;
+      details = language === 'en' 
+        ? `Performed operation on ${entityLabel}`
+        : `Thao tác trên đối tượng ${entityLabel}`;
     }
 
     return {
@@ -106,7 +112,7 @@ export const AdminHomeScreen = () => {
       entityLabel,
       executor,
       details,
-      ipAddress: log.ipAddress || 'Unknown IP'
+      ipAddress: log.ipAddress || '127.0.0.1'
     };
   };
 
@@ -152,30 +158,30 @@ export const AdminHomeScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title="Quản Lý KTX" />
+      <Header title={language === 'en' ? 'Dormitory Admin' : 'Quản Lý KTX'} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
         {/* Welcome Banner */}
         <Card style={styles.managerBanner}>
-          <Text style={styles.bannerSubtitle}>Bảng điều khiển</Text>
-          <Text style={styles.bannerTitle}>BAN QUẢN LÝ KÍ TÚC XÁ</Text>
-          <Text style={styles.bannerInfo}>Hệ thống vận hành kĩ thuật & lưu trú sinh viên</Text>
+          <Text style={styles.bannerSubtitle}>{t('adminDashboard', language)}</Text>
+          <Text style={styles.bannerTitle}>{t('adminDormManagement', language)}</Text>
+          <Text style={styles.bannerInfo}>{t('adminSystemSubtitle', language)}</Text>
         </Card>
 
         {/* Dynamic statistics layout */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Số liệu thống kê</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('statistics', language)}</Text>
         <View style={styles.statsGrid}>
           <Card style={styles.statsCard} onPress={() => navigate('AdminStudentList')}>
             <View style={{ alignItems: 'flex-start' }}>
               <BadgeIcon name="users" color="#2563EB" size={32} />
-              <Text style={[styles.statsLabel, { color: colors.textSecondary }]}>Sinh viên lưu trú</Text>
-              <Text style={[styles.statsValue, { color: colors.text }]}>{totalStudents} SV</Text>
+              <Text style={[styles.statsLabel, { color: colors.textSecondary }]}>{t('occupantStudents', language)}</Text>
+              <Text style={[styles.statsValue, { color: colors.text }]}>{totalStudents} {language === 'en' ? 'stud.' : 'SV'}</Text>
               {pendingRegistrations > 0 ? (
                 <View style={styles.badgeLabel}>
-                  <Text style={styles.badgeLabelText}>+{pendingRegistrations} Chờ duyệt</Text>
+                  <Text style={styles.badgeLabelText}>{t('pendingApprovalCount', language, { count: pendingRegistrations })}</Text>
                 </View>
               ) : (
-                <Text style={[styles.statsSubText, { color: colors.textSecondary }]}>Đã ổn định</Text>
+                <Text style={[styles.statsSubText, { color: colors.textSecondary }]}>{t('stable', language)}</Text>
               )}
             </View>
           </Card>
@@ -183,10 +189,10 @@ export const AdminHomeScreen = () => {
           <Card style={styles.statsCard} onPress={() => navigate('AdminRoomList')}>
             <View style={{ alignItems: 'flex-start' }}>
               <BadgeIcon name="room" color="#10B981" size={32} />
-              <Text style={[styles.statsLabel, { color: colors.textSecondary }]}>Tỉ lệ lấp đầy</Text>
+              <Text style={[styles.statsLabel, { color: colors.textSecondary }]}>{t('occupancyRate', language)}</Text>
               <Text style={[styles.statsValue, { color: colors.text }]}>{occupancyRate}%</Text>
               <Text style={[styles.statsSubText, { color: colors.textSecondary }]}>
-                {occupiedBeds}/{totalCapacity} giường
+                {occupiedBeds}/{totalCapacity} {language === 'en' ? 'beds' : 'giường'}
               </Text>
             </View>
           </Card>
@@ -194,32 +200,32 @@ export const AdminHomeScreen = () => {
           <Card style={styles.statsCard} onPress={() => navigate('AdminRequestList')}>
             <View style={{ alignItems: 'flex-start' }}>
               <BadgeIcon name="alert" color="#D97706" size={32} />
-              <Text style={[styles.statsLabel, { color: colors.textSecondary }]}>Sự cố chờ xử lý</Text>
+              <Text style={[styles.statsLabel, { color: colors.textSecondary }]}>{t('pendingIncidents', language)}</Text>
               <Text style={[styles.statsValue, { color: pendingRequests > 0 ? colors.danger : colors.success }]}>
-                {pendingRequests} sự cố
+                {pendingRequests} {language === 'en' ? 'issues' : 'sự cố'}
               </Text>
               <Text style={[styles.statsSubText, { color: colors.textSecondary }]}>
-                Cần phân công gấp
+                {t('needsUrgentAssign', language)}
               </Text>
             </View>
           </Card>
 
-          <Card style={styles.statsCard}>
+          <Card style={styles.statsCard} onPress={() => navigate('AdminInvoiceList')}>
             <View style={{ alignItems: 'flex-start' }}>
               <BadgeIcon name="invoice" color="#DC2626" size={32} />
-              <Text style={[styles.statsLabel, { color: colors.textSecondary }]}>Tiền chưa thu</Text>
+              <Text style={[styles.statsLabel, { color: colors.textSecondary }]}>{t('unpaidRevenue', language)}</Text>
               <Text style={[styles.statsValue, { color: colors.danger }]} numberOfLines={1}>
                 {Math.round(totalUnpaidRevenue / 1000000 * 10) / 10} Tr đ
               </Text>
               <Text style={[styles.statsSubText, { color: colors.textSecondary }]}>
-                {unpaidInvoicesCount} hóa đơn
+                {t('unpaidCountSummary', language, { count: unpaidInvoicesCount })}
               </Text>
             </View>
           </Card>
         </View>
 
         {/* Administrative Quick Actions */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Nghiệp vụ Quản lý</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('adminOperations', language)}</Text>
         <View style={styles.actionGrid}>
           <Card
             style={styles.actionBtn}
@@ -227,7 +233,7 @@ export const AdminHomeScreen = () => {
           >
             <View style={{ alignItems: 'center' }}>
               <BadgeIcon name="room" color="#2563EB" size={34} style={{ marginBottom: SPACING.xs }} />
-              <Text style={[styles.actionLabelText, { color: colors.text }]}>Quản lý phòng</Text>
+              <Text style={[styles.actionLabelText, { color: colors.text }]}>{t('manageRooms', language)}</Text>
             </View>
           </Card>
 
@@ -237,7 +243,7 @@ export const AdminHomeScreen = () => {
           >
             <View style={{ alignItems: 'center' }}>
               <BadgeIcon name="users" color="#10B981" size={34} style={{ marginBottom: SPACING.xs }} />
-              <Text style={[styles.actionLabelText, { color: colors.text }]}>Quản lý sinh viên</Text>
+              <Text style={[styles.actionLabelText, { color: colors.text }]}>{t('manageStudents', language)}</Text>
             </View>
           </Card>
 
@@ -247,7 +253,7 @@ export const AdminHomeScreen = () => {
           >
             <View style={{ alignItems: 'center' }}>
               <BadgeIcon name="settings" color="#8B5CF6" size={34} style={{ marginBottom: SPACING.xs }} />
-              <Text style={[styles.actionLabelText, { color: colors.text }]}>Quản lý sự cố</Text>
+              <Text style={[styles.actionLabelText, { color: colors.text }]}>{t('manageIncidents', language)}</Text>
             </View>
           </Card>
 
@@ -257,7 +263,7 @@ export const AdminHomeScreen = () => {
           >
             <View style={{ alignItems: 'center' }}>
               <BadgeIcon name="plus" color="#D97706" size={34} style={{ marginBottom: SPACING.xs }} />
-              <Text style={[styles.actionLabelText, { color: colors.text }]}>Tạo hóa đơn mới</Text>
+              <Text style={[styles.actionLabelText, { color: colors.text }]}>{t('createInvoice', language)}</Text>
             </View>
           </Card>
         </View>
@@ -270,9 +276,9 @@ export const AdminHomeScreen = () => {
           <View style={styles.publishCardRow}>
             <BadgeIcon name="bell" color={colors.primary} size={28} style={{ marginRight: SPACING.sm }} />
             <View style={{ flex: 1 }}>
-              <Text style={[styles.publishCardTitle, { color: colors.primary }]}>Đăng Bản Tin & Thông Báo</Text>
+              <Text style={[styles.publishCardTitle, { color: colors.primary }]}>{t('publishAnnouncement', language)}</Text>
               <Text style={[styles.publishCardDesc, { color: colors.textSecondary }]}>
-                Đăng tải thông báo KTX quan trọng gửi tới toàn thể sinh viên
+                {t('publishAnnouncementDesc', language)}
               </Text>
             </View>
             <Icon name="plus" color={colors.primary} size={16} />
@@ -281,9 +287,9 @@ export const AdminHomeScreen = () => {
 
         {/* Latest active requests */}
         <View style={styles.listHeaderRow}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Yêu cầu sửa chữa mới</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('newRepairRequests', language)}</Text>
           <Card style={{ paddingHorizontal: 10, paddingVertical: 4, marginVertical: 0 }} onPress={() => navigate('AdminRequestList')}>
-            <Text style={[styles.seeAllText, { color: colors.primary }]}>Chi tiết</Text>
+            <Text style={[styles.seeAllText, { color: colors.primary }]}>{t('details', language)}</Text>
           </Card>
         </View>
 
@@ -297,11 +303,11 @@ export const AdminHomeScreen = () => {
               <View style={styles.reqBadgeRow}>
                 <View style={[styles.priorityTag, { backgroundColor: req.priority === 'Cao' ? '#FEE2E2' : '#FEF3C7' }]}>
                   <Text style={[styles.priorityTagText, { color: req.priority === 'Cao' ? colors.danger : colors.warning }]}>
-                    {req.priority}
+                    {language === 'en' ? (req.priority === 'Cao' ? 'High' : req.priority === 'Trung bình' ? 'Medium' : 'Low') : req.priority}
                   </Text>
                 </View>
                 <Text style={[styles.reqRoomText, { color: colors.primary }]}>
-                  Phòng {req.roomName} ({req.block})
+                  {formatRoomTitle(req.roomName, language)} ({req.block})
                 </Text>
               </View>
               <Text style={[styles.reqTime, { color: colors.textSecondary }]}>{req.createdAt}</Text>
@@ -314,7 +320,7 @@ export const AdminHomeScreen = () => {
         ))}
 
         {/* Audit Logs Section */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Nhật ký hệ thống (Audit Logs)</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('auditLogs', language)}</Text>
         {auditLogs && auditLogs.length > 0 ? (
           auditLogs.slice(0, 4).map((log: any) => {
             const formatted = formatAuditLog(log);
@@ -327,7 +333,7 @@ export const AdminHomeScreen = () => {
                     </Text>
                   </View>
                   <Text style={[styles.logTime, { color: colors.textSecondary }]}>
-                    {log.createdAt ? new Date(log.createdAt).toLocaleString('vi-VN') : 'Gần đây'}
+                    {log.createdAt ? new Date(log.createdAt).toLocaleString(language === 'en' ? 'en-US' : 'vi-VN') : (language === 'en' ? 'Recent' : 'Gần đây')}
                   </Text>
                 </View>
                 <Text style={[styles.logBodyText, { color: colors.text, fontWeight: '600', marginVertical: 6, fontSize: 13, lineHeight: 18 }]}>
@@ -336,7 +342,7 @@ export const AdminHomeScreen = () => {
                 <View style={[styles.logDivider, { backgroundColor: colors.border, marginVertical: 4 }]} />
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Text style={{ fontSize: 11, color: colors.textSecondary, fontWeight: '500' }}>
-                    Thực hiện: <Text style={{ color: colors.text, fontWeight: 'bold' }}>{formatted.executor}</Text>
+                    {language === 'en' ? 'By: ' : 'Thực hiện: '}<Text style={{ color: colors.text, fontWeight: 'bold' }}>{formatted.executor}</Text>
                   </Text>
                   <Text style={{ fontSize: 10, color: colors.textSecondary, fontFamily: 'monospace' }}>
                     IP: {formatted.ipAddress}
@@ -346,11 +352,13 @@ export const AdminHomeScreen = () => {
             );
           })
         ) : (
-          <Text style={[styles.emptyLogText, { color: colors.textSecondary }]}>Chưa có nhật ký hoạt động nào.</Text>
+          <Text style={[styles.emptyLogText, { color: colors.textSecondary }]}>
+            {language === 'en' ? 'No recent activity logs.' : 'Chưa có nhật ký hoạt động nào.'}
+          </Text>
         )}
 
         {/* Notification Logs Section */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Nhật ký gửi thông báo (Notifications)</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('notificationLogs', language)}</Text>
         {notificationLogs && notificationLogs.length > 0 ? (
           notificationLogs.slice(0, 4).map((noti: any) => (
             <Card key={noti.id || Math.random().toString()} style={styles.logCard}>
@@ -364,7 +372,7 @@ export const AdminHomeScreen = () => {
               </View>
               <Text style={[styles.logSubjectText, { color: colors.text, fontWeight: '600' }]}>{noti.subject}</Text>
               <Text style={[styles.logMessageText, { color: colors.textSecondary }]}>{noti.message}</Text>
-              <Text style={[styles.logChannelText, { color: colors.primary }]}>Kênh: {noti.channel}</Text>
+              <Text style={[styles.logChannelText, { color: colors.primary }]}>{language === 'en' ? 'Channel: ' : 'Kênh: '}{noti.channel}</Text>
             </Card>
           ))
         ) : (

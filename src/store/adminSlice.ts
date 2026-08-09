@@ -24,54 +24,74 @@ export const fetchStudentsAdmin = createAsyncThunk(
   'admin/fetchStudents',
   async (_, { rejectWithValue }) => {
     try {
-      const [usersRes, profilesRes, assignmentsRes, roomsTreeRes] = await Promise.all([
+      const [usersRes, profilesRes, assignmentsRes, nodesRes] = await Promise.all([
         api.get('/api/users'),
         api.get('/api/users/profile/student-profiles').catch(() => ({ data: { result: [] } })),
         api.get('/api/room-assignments').catch(() => ({ data: { result: [] } })),
-        api.get('/api/building-nodes/tree/4').catch(() => ({ data: { result: [] } })),
+        api.get('/api/building-nodes').catch(() => ({ data: { result: [] } })),
       ]);
 
       const users = usersRes.data.result || [];
       const profiles = profilesRes.data?.result || [];
       const assignments = assignmentsRes.data?.result || [];
-      const roomsTree = roomsTreeRes.data?.result || [];
+      const nodes = nodesRes.data?.result || [];
+
+      // Create lookup map for building nodes to resolve room name & block
+      const nodeMap = new Map<string, any>();
+      nodes.forEach((n: any) => {
+        if (n.id) nodeMap.set(n.id.toString(), n);
+      });
 
       return users.map((user: any) => {
-        const profile = profiles.find((p: any) => p.user?.id === user.id || p.id === user.id);
+        const profile = profiles.find((p: any) => 
+          (p.user && p.user.id === user.id) || p.id === user.id || (p.userId && p.userId === user.id)
+        );
         const roles = user.roles || [];
-        const isManager = roles.some((r: any) => r.name === 'Admin' || r.name === 'Manager' || r.name === 'ROLE_ADMIN' || r.name === 'ROLE_Manager');
 
         // Check if user has room assignment
         const assignment = assignments.find((a: any) => a.userId === user.id);
-        const roomNode = assignment ? roomsTree.find((r: any) => r.id === assignment.roomNodeId) : null;
-
-        let roomName = 'Chưa xếp';
+        let roomName = '';
         let blockName = '';
-        if (roomNode) {
-          roomName = roomNode.name;
-          if (roomNode.parent?.parent) {
-            blockName = roomNode.parent.parent.name;
+        let roomNodeId = '';
+
+        if (assignment && assignment.roomNodeId) {
+          roomNodeId = assignment.roomNodeId.toString();
+          const roomNode = nodeMap.get(roomNodeId);
+          if (roomNode) {
+            roomName = roomNode.name;
+            if (roomNode.parentId) {
+              const floorNode = nodeMap.get(roomNode.parentId.toString());
+              if (floorNode && floorNode.parentId) {
+                const bldgNode = nodeMap.get(floorNode.parentId.toString());
+                if (bldgNode) blockName = bldgNode.name;
+              } else if (floorNode) {
+                blockName = floorNode.name;
+              }
+            }
           }
         }
 
+        // isActive mapping: if isActive === true in DB, student is active ("Đang ở"). If false, "Chờ duyệt"
+        const isActive = user.isActive === true || user.active === true || user.status === 'ACTIVE' || user.status === 'ENABLE';
+
         return {
           id: user.id,
-          name: user.fullName,
+          name: user.fullName || user.email?.split('@')[0] || 'User',
           email: user.email,
-          phone: user.phoneNumber || 'N/A',
+          phone: user.phoneNumber || '',
           gender: user.gender || 'Nam',
-          studentId: profile?.studentCode || (isManager ? 'BQL' : 'Chưa cập nhật'),
-          class: profile?.major || (isManager ? 'Ban Quản Lý' : 'Chưa cập nhật'),
-          status: user.isActive ? 'Đang ở' : 'Chờ duyệt',
-          roomId: roomNode?.id || '',
-          roomName,
-          block: blockName,
-          contractStart: assignment?.startDate ? new Date(assignment.startDate).toLocaleDateString('vi-VN') : 'N/A',
-          contractEnd: assignment?.endDate ? new Date(assignment.endDate).toLocaleDateString('vi-VN') : 'N/A',
+          studentId: profile?.studentCode || '',
+          class: profile?.major || '',
+          status: isActive ? 'Đang ở' : 'Chờ duyệt',
+          roomId: roomNodeId,
+          roomName: roomName || 'Chưa xếp',
+          block: blockName || 'Tòa A1',
+          contractStart: assignment?.startDate ? new Date(assignment.startDate).toLocaleDateString('vi-VN') : '',
+          contractEnd: assignment?.endDate ? new Date(assignment.endDate).toLocaleDateString('vi-VN') : '',
           roomAssignmentId: assignment?.id || '',
           violations: [],
-          avatar: '',
-          roles: roles.map((r: any) => r.name),
+          avatar: user.avatar || '',
+          roles: Array.isArray(roles) ? roles.map((r: any) => typeof r === 'string' ? r : r.name) : [],
         };
       });
     } catch (error: any) {

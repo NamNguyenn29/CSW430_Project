@@ -12,6 +12,8 @@ import {
   AlertTriangle,
   Calendar,
   ChevronLeft,
+  ChevronRight,
+  ArrowLeft,
   Plus,
   Check,
   Pencil,
@@ -27,6 +29,14 @@ import {
   RefreshCw,
   Phone,
   LogOut,
+  Inbox,
+  Clock,
+  HelpCircle,
+  Wrench,
+  FileText,
+  Building,
+  DollarSign,
+  Shield,
 } from 'lucide-react-native';
 
 export type IconName =
@@ -41,6 +51,8 @@ export type IconName =
   | 'alert'
   | 'calendar'
   | 'back'
+  | 'chevron-right'
+  | 'arrow-left'
   | 'plus'
   | 'check'
   | 'edit'
@@ -55,7 +67,15 @@ export type IconName =
   | 'users'
   | 'switch'
   | 'phone'
-  | 'logout';
+  | 'logout'
+  | 'inbox'
+  | 'clock'
+  | 'help'
+  | 'wrench'
+  | 'file'
+  | 'building'
+  | 'dollar'
+  | 'shield';
 
 interface IconProps {
   name: IconName;
@@ -95,6 +115,10 @@ export const Icon: React.FC<IconProps> = ({
       return <Calendar {...iconProps} />;
     case 'back':
       return <ChevronLeft {...iconProps} />;
+    case 'chevron-right':
+      return <ChevronRight {...iconProps} />;
+    case 'arrow-left':
+      return <ArrowLeft {...iconProps} />;
     case 'plus':
       return <Plus {...iconProps} />;
     case 'check':
@@ -125,6 +149,22 @@ export const Icon: React.FC<IconProps> = ({
       return <Phone {...iconProps} />;
     case 'logout':
       return <LogOut {...iconProps} />;
+    case 'inbox':
+      return <Inbox {...iconProps} />;
+    case 'clock':
+      return <Clock {...iconProps} />;
+    case 'help':
+      return <HelpCircle {...iconProps} />;
+    case 'wrench':
+      return <Wrench {...iconProps} />;
+    case 'file':
+      return <FileText {...iconProps} />;
+    case 'building':
+      return <Building {...iconProps} />;
+    case 'dollar':
+      return <DollarSign {...iconProps} />;
+    case 'shield':
+      return <Shield {...iconProps} />;
     default:
       return null;
   }

@@ -12,10 +12,13 @@ import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Header } from '../../components/Header';
+import { BadgeIcon } from '../../components/BadgeIcon';
+import { Icon } from '../../components/Icon';
 import { COLORS, SIZES, SPACING } from '../../theme/theme';
+import { t, formatRoomTitle } from '../../i18n/translations';
 
 export const AdminRoomDetailScreen = () => {
-  const { theme, screenParams, rooms, students, updateRoomMeter, deleteNode, goBack, navigate } = useApp();
+  const { theme, language, screenParams, rooms, students, updateRoomMeter, deleteNode, goBack, navigate } = useApp();
   const colors = COLORS[theme];
 
   const { roomId } = screenParams;
@@ -29,9 +32,9 @@ export const AdminRoomDetailScreen = () => {
   if (!room) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header title="Chi Tiết Phòng" showBack />
+        <Header title={t('roomDetail', language)} showBack />
         <View style={styles.errorContainer}>
-          <Text style={[styles.errorText, { color: colors.text }]}>Không tìm thấy phòng này.</Text>
+          <Text style={[styles.errorText, { color: colors.text }]}>{language === 'en' ? 'Room not found.' : 'Không tìm thấy phòng này.'}</Text>
         </View>
       </SafeAreaView>
     );
@@ -45,7 +48,7 @@ export const AdminRoomDetailScreen = () => {
     const eNum = parseInt(elecIdx, 10);
 
     if (isNaN(wNum) || isNaN(eNum)) {
-      Alert.alert('Lỗi nhập liệu', 'Vui lòng nhập chỉ số điện nước hợp lệ (dạng số nguyên).');
+      Alert.alert(t('error', language), language === 'en' ? 'Please enter valid integer utility meter values.' : 'Vui lòng nhập chỉ số điện nước hợp lệ (dạng số nguyên).');
       return;
     }
 
@@ -53,27 +56,29 @@ export const AdminRoomDetailScreen = () => {
     setTimeout(() => {
       setIsUpdating(false);
       updateRoomMeter(room.id, wNum, eNum);
-      Alert.alert('Cập nhật thành công', `Đã cập nhật chỉ số điện nước mới cho phòng ${room.name}!`);
-    }, 800);
+      Alert.alert(t('success', language), language === 'en' ? `Utility meters updated for ${formatRoomTitle(room.name, language)}!` : `Đã cập nhật chỉ số điện nước mới cho phòng ${room.name}!`);
+    }, 600);
   };
 
   const handleDeleteRoom = () => {
     Alert.alert(
-      'Xác nhận xóa',
-      `Bạn có chắc chắn muốn xóa phòng ${room.name} không? Tất cả dữ liệu xếp phòng hiện tại sẽ bị xóa vĩnh viễn.`,
+      t('deleteRoom', language),
+      language === 'en'
+        ? `Are you sure you want to delete ${formatRoomTitle(room.name, language)}?`
+        : `Bạn có chắc chắn muốn xóa phòng ${room.name} không? Tất cả dữ liệu xếp phòng hiện tại sẽ bị xóa vĩnh viễn.`,
       [
-        { text: 'Hủy', style: 'cancel' },
+        { text: t('cancel', language), style: 'cancel' },
         {
-          text: 'Xóa',
+          text: language === 'en' ? 'Delete' : 'Xóa',
           style: 'destructive',
           onPress: async () => {
             setIsDeleting(true);
             try {
               await deleteNode(room.id);
-              Alert.alert('Thành công', 'Đã xóa phòng thành công.');
+              Alert.alert(t('success', language), language === 'en' ? 'Room deleted successfully.' : 'Đã xóa phòng thành công.');
               goBack();
             } catch (e: any) {
-              Alert.alert('Thất bại', e.message || 'Không thể xóa phòng này.');
+              Alert.alert(t('error', language), e.message || 'Không thể xóa phòng này.');
             } finally {
               setIsDeleting(false);
             }
@@ -94,7 +99,7 @@ export const AdminRoomDetailScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title={`Phòng ${room.name}`} showBack />
+      <Header title={formatRoomTitle(room.name, language)} showBack />
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         
         {/* Room Header Info */}
@@ -102,8 +107,8 @@ export const AdminRoomDetailScreen = () => {
           <View style={styles.row}>
             <View>
               <Text style={styles.blockText}>{room.block}</Text>
-              <Text style={[styles.title, { color: colors.text }]}>Phòng {room.name}</Text>
-              <Text style={[styles.roomType, { color: colors.textSecondary }]}>Loại giường: {room.type}</Text>
+              <Text style={[styles.title, { color: colors.text }]}>{formatRoomTitle(room.name, language)}</Text>
+              <Text style={[styles.roomType, { color: colors.textSecondary }]}>{t('roomType', language)}: {room.type}</Text>
             </View>
             <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(room.status)}15` }]}>
               <Text style={[styles.statusBadgeText, { color: getStatusColor(room.status) }]}>{room.status}</Text>
@@ -112,10 +117,10 @@ export const AdminRoomDetailScreen = () => {
         </Card>
 
         {/* Room Occupants */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Thành viên phòng ({occupantsList.length})</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('occupants', language)} ({occupantsList.length})</Text>
         {occupantsList.length === 0 ? (
           <Card style={styles.emptyCard}>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Phòng trống, chưa có sinh viên ở.</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{t('emptyRoom', language)}</Text>
           </Card>
         ) : (
           occupantsList.map(student => (
@@ -125,46 +130,49 @@ export const AdminRoomDetailScreen = () => {
               onPress={() => navigate('AdminStudentDetail', { studentId: student.id })}
             >
               <View style={styles.studentRow}>
-                <Text style={styles.studentAvatar}>👤</Text>
+                <BadgeIcon name="profile" color={colors.primary} size={32} />
                 <View style={styles.studentInfo}>
                   <Text style={[styles.studentName, { color: colors.text }]}>{student.name}</Text>
                   <Text style={[styles.studentSub, { color: colors.textSecondary }]}>
-                    MSSV: {student.studentId} | Lớp: {student.class}
+                    {t('studentId', language)}: {student.studentId} | {t('class', language)}: {student.class}
                   </Text>
                 </View>
-                <Text style={[styles.detailsLink, { color: colors.primary }]}>Hồ sơ ➔</Text>
+                <View style={styles.detailsLinkWrapper}>
+                  <Text style={[styles.detailsLink, { color: colors.primary }]}>{t('studentProfile', language)}</Text>
+                  <Icon name="chevron-right" color={colors.primary} size={14} style={{ marginLeft: 2 }} />
+                </View>
               </View>
             </Card>
           ))
         )}
 
         {/* Update Meter Indices */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Cập nhật chỉ số điện nước</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('updateMeter', language)}</Text>
         <Card style={styles.meterCard}>
           <View style={styles.meterInputsRow}>
             <View style={styles.inputWrapper}>
               <Input
-                label="Chỉ số điện cũ: 1200"
-                placeholder="Số điện mới"
+                label={t('electricityIndex', language)}
+                placeholder={language === 'en' ? 'New electricity index' : 'Số điện mới'}
                 keyboardType="numeric"
                 value={elecIdx}
                 onChangeText={setElecIdx}
-                icon="⚡"
+                icon="zap"
               />
             </View>
             <View style={[styles.inputWrapper, { marginLeft: SPACING.md }]}>
               <Input
-                label="Chỉ số nước cũ: 98"
-                placeholder="Số nước mới"
+                label={t('waterIndex', language)}
+                placeholder={language === 'en' ? 'New water index' : 'Số nước mới'}
                 keyboardType="numeric"
                 value={waterIdx}
                 onChangeText={setWaterIdx}
-                icon="💧"
+                icon="droplet"
               />
             </View>
           </View>
           <Button
-            title="Cập nhật chỉ số"
+            title={t('updateMetersBtn', language)}
             onPress={handleUpdateMeters}
             loading={isUpdating}
             variant="secondary"
@@ -174,16 +182,16 @@ export const AdminRoomDetailScreen = () => {
 
         {/* Create Invoice Action */}
         <Button
-          title="Tạo hóa đơn cho phòng này"
+          title={t('createInvoice', language)}
           onPress={() => navigate('AdminAddInvoice', { preselectedRoomId: room.id })}
           variant="primary"
-          icon="✍️"
+          icon="plus"
           style={{ marginTop: SPACING.md }}
         />
 
         {/* Delete Room Action */}
         <Button
-          title="Xóa phòng ở này"
+          title={t('deleteRoom', language)}
           onPress={handleDeleteRoom}
           loading={isDeleting}
           variant="danger"
@@ -262,12 +270,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  studentAvatar: {
-    fontSize: 28,
-    marginRight: SPACING.md,
-  },
   studentInfo: {
     flex: 1,
+    marginLeft: SPACING.sm,
   },
   studentName: {
     fontSize: SIZES.fontMd,
@@ -276,6 +281,10 @@ const styles = StyleSheet.create({
   studentSub: {
     fontSize: SIZES.fontXs,
     marginTop: 2,
+  },
+  detailsLinkWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   detailsLink: {
     fontSize: SIZES.fontXs,

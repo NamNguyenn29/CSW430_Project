@@ -9,14 +9,14 @@ import {
   Alert,
 } from 'react-native';
 import { useApp } from '../../context/AppContext';
-import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
 import { Header } from '../../components/Header';
 import { COLORS, SIZES, SPACING } from '../../theme/theme';
+import { t, formatRoomTitle } from '../../i18n/translations';
 
 export const AdminAddInvoiceScreen = () => {
-  const { theme, rooms, addInvoice, goBack, screenParams } = useApp();
+  const { theme, language, rooms, addInvoice, goBack, screenParams } = useApp();
   const colors = COLORS[theme];
 
   const preselectedRoomId = screenParams?.preselectedRoomId || '';
@@ -31,19 +31,19 @@ export const AdminAddInvoiceScreen = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleCreateInvoice = () => {
+  const handleCreateInvoice = async () => {
     const rentNum = parseFloat(rentFee);
     const elecNum = parseFloat(elecFee);
     const waterNum = parseFloat(waterFee);
     const serviceNum = parseFloat(serviceFee);
 
     const newErrors: Record<string, string> = {};
-    if (!selectedRoomId) newErrors.roomId = 'Vui lòng chọn phòng để lập hóa đơn';
-    if (isNaN(rentNum) || rentNum < 0) newErrors.rentFee = 'Tiền phòng không hợp lệ';
-    if (isNaN(elecNum) || elecNum < 0) newErrors.electricityFee = 'Tiền điện không hợp lệ';
-    if (isNaN(waterNum) || waterNum < 0) newErrors.waterFee = 'Tiền nước không hợp lệ';
-    if (isNaN(serviceNum) || serviceNum < 0) newErrors.serviceFee = 'Tiền dịch vụ không hợp lệ';
-    if (!month.trim()) newErrors.month = 'Vui lòng nhập kỳ hóa đơn';
+    if (!selectedRoomId) newErrors.roomId = language === 'en' ? 'Please select a room' : 'Vui lòng chọn phòng để lập hóa đơn';
+    if (isNaN(rentNum) || rentNum < 0) newErrors.rentFee = language === 'en' ? 'Invalid room rent' : 'Tiền phòng không hợp lệ';
+    if (isNaN(elecNum) || elecNum < 0) newErrors.electricityFee = language === 'en' ? 'Invalid electricity fee' : 'Tiền điện không hợp lệ';
+    if (isNaN(waterNum) || waterNum < 0) newErrors.waterFee = language === 'en' ? 'Invalid water fee' : 'Tiền nước không hợp lệ';
+    if (isNaN(serviceNum) || serviceNum < 0) newErrors.serviceFee = language === 'en' ? 'Invalid service fee' : 'Tiền dịch vụ không hợp lệ';
+    if (!month.trim()) newErrors.month = language === 'en' ? 'Please enter billing period' : 'Vui lòng nhập kỳ hóa đơn';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -52,27 +52,42 @@ export const AdminAddInvoiceScreen = () => {
 
     setIsLoading(true);
 
-    setTimeout(() => {
+    try {
+      const res = await addInvoice(selectedRoomId, rentNum, elecNum, waterNum, serviceNum, month);
       setIsLoading(false);
-      addInvoice(selectedRoomId, rentNum, elecNum, waterNum, serviceNum, month);
-      
-      const targetRoom = rooms.find(r => r.id === selectedRoomId);
+
+      if (res?.success) {
+        const targetRoom = rooms.find(r => r.id === selectedRoomId);
+        Alert.alert(
+          t('success', language),
+          language === 'en'
+            ? `Invoice created for ${formatRoomTitle(targetRoom?.name || '', language)} (${month})!`
+            : `Đã lập hóa đơn ${month} thành công cho ${formatRoomTitle(targetRoom?.name || '', 'vi')}!`,
+          [{ text: t('done', language), onPress: () => goBack() }]
+        );
+      } else {
+        Alert.alert(
+          t('error', language),
+          res?.message || (language === 'en' ? 'Failed to create invoice.' : 'Không thể lập hóa đơn.')
+        );
+      }
+    } catch (err: any) {
+      setIsLoading(false);
       Alert.alert(
-        'Tạo hóa đơn thành công',
-        `Đã lập hóa đơn ${month} thành công cho phòng ${targetRoom?.name}!`,
-        [{ text: 'Hoàn tất', onPress: () => goBack() }]
+        t('error', language),
+        err.message || (language === 'en' ? 'Failed to create invoice.' : 'Không thể lập hóa đơn.')
       );
-    }, 1000);
+    }
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title="Lập Hóa Đơn Mới" showBack />
+      <Header title={t('createInvoice', language)} showBack />
       <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         
         <View style={styles.form}>
           {/* Room Selector */}
-          <Text style={[styles.label, { color: colors.textSecondary }]}>Chọn phòng lập hóa đơn</Text>
+          <Text style={[styles.label, { color: colors.textSecondary }]}>{language === 'en' ? 'Select Room' : 'Chọn phòng lập hóa đơn'}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.roomsScroll}>
             {rooms.map(room => (
               <TouchableOpacity
@@ -85,7 +100,7 @@ export const AdminAddInvoiceScreen = () => {
                 onPress={() => setSelectedRoomId(room.id)}
               >
                 <Text style={[styles.roomTabText, selectedRoomId === room.id ? { color: '#FFF' } : { color: colors.text }]}>
-                  {room.name} ({room.block})
+                  {formatRoomTitle(room.name, language)} ({room.block})
                 </Text>
               </TouchableOpacity>
             ))}
@@ -93,7 +108,7 @@ export const AdminAddInvoiceScreen = () => {
           {errors.roomId && <Text style={[styles.errorText, { color: colors.danger }]}>{errors.roomId}</Text>}
 
           <Input
-            label="Kỳ hóa đơn (tháng/năm)"
+            label={t('billingPeriod', language)}
             placeholder="Tháng 07/2026"
             value={month}
             onChangeText={(text) => {
@@ -101,11 +116,11 @@ export const AdminAddInvoiceScreen = () => {
               if (errors.month) setErrors(prev => ({ ...prev, month: '' }));
             }}
             error={errors.month}
-            icon="📅"
+            icon="calendar"
           />
 
           <Input
-            label="Tiền phòng (đ)"
+            label={`${t('rentFee', language)} (đ)`}
             placeholder="1200000"
             keyboardType="numeric"
             value={rentFee}
@@ -114,11 +129,11 @@ export const AdminAddInvoiceScreen = () => {
               if (errors.rentFee) setErrors(prev => ({ ...prev, rentFee: '' }));
             }}
             error={errors.rentFee}
-            icon="💵"
+            icon="dollar"
           />
 
           <Input
-            label="Tiền điện sử dụng (đ)"
+            label={`${t('electricityFee', language)} (đ)`}
             placeholder="350000"
             keyboardType="numeric"
             value={elecFee}
@@ -127,11 +142,11 @@ export const AdminAddInvoiceScreen = () => {
               if (errors.electricityFee) setErrors(prev => ({ ...prev, electricityFee: '' }));
             }}
             error={errors.electricityFee}
-            icon="⚡"
+            icon="zap"
           />
 
           <Input
-            label="Tiền nước sử dụng (đ)"
+            label={`${t('waterFee', language)} (đ)`}
             placeholder="120000"
             keyboardType="numeric"
             value={waterFee}
@@ -140,11 +155,11 @@ export const AdminAddInvoiceScreen = () => {
               if (errors.waterFee) setErrors(prev => ({ ...prev, waterFee: '' }));
             }}
             error={errors.waterFee}
-            icon="💧"
+            icon="droplet"
           />
 
           <Input
-            label="Phí dịch vụ (Wifi, vệ sinh) (đ)"
+            label={`${t('serviceFee', language)} (đ)`}
             placeholder="100000"
             keyboardType="numeric"
             value={serviceFee}
@@ -153,17 +168,18 @@ export const AdminAddInvoiceScreen = () => {
               if (errors.serviceFee) setErrors(prev => ({ ...prev, serviceFee: '' }));
             }}
             error={errors.serviceFee}
-            icon="🛠️"
+            icon="settings"
           />
 
           <Button
-            title="Lập Hóa Đơn & Phát Hành"
+            title={t('createInvoice', language)}
             onPress={handleCreateInvoice}
             loading={isLoading}
             variant="primary"
-            style={{ marginTop: SPACING.md, marginBottom: SPACING.xl }}
+            style={{ marginTop: SPACING.lg }}
           />
         </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -181,32 +197,26 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: SIZES.fontSm,
-    fontWeight: '500',
-    marginBottom: 8,
-    marginLeft: 2,
+    fontWeight: 'bold',
+    marginBottom: SPACING.xs,
   },
   roomsScroll: {
     flexDirection: 'row',
     marginBottom: SPACING.sm,
   },
   roomTab: {
-    paddingHorizontal: 16,
-    height: 40,
-    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-    marginVertical: 4,
+    borderRadius: SIZES.radiusSm,
+    marginRight: 6,
   },
   roomTabText: {
-    fontSize: SIZES.fontSm,
+    fontSize: SIZES.fontXs,
     fontWeight: 'bold',
   },
   errorText: {
     fontSize: SIZES.fontXs,
-    marginTop: -4,
-    marginBottom: 8,
-    marginLeft: 2,
+    marginBottom: SPACING.xs,
   },
 });

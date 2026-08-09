@@ -12,35 +12,43 @@ import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { Header } from '../../components/Header';
+import { BadgeIcon } from '../../components/BadgeIcon';
+import { Icon } from '../../components/Icon';
 import { COLORS, SIZES, SPACING } from '../../theme/theme';
+import { t, formatRoomTitle } from '../../i18n/translations';
 
 export const AdminStudentDetailScreen = () => {
-  const { theme, screenParams, students, rooms, assignRoom, toggleUser } = useApp();
+  const { theme, language, screenParams, students, rooms, assignRoom, toggleUser } = useApp();
   const colors = COLORS[theme];
 
   const { studentId } = screenParams;
   const student = students.find(s => s.id === studentId);
 
-  const [selectedRoomId, setSelectedRoomId] = useState('');
   const [isAssigning, setIsAssigning] = useState(false);
 
   const handleToggleStatus = () => {
-    const actionText = student?.status === 'Chờ duyệt' ? 'kích hoạt' : 'tạm khóa';
+    const isPending = student?.status === 'Chờ duyệt';
+    const actionText = isPending 
+      ? (language === 'en' ? 'approve' : 'kích hoạt') 
+      : (language === 'en' ? 'deactivate' : 'tạm khóa');
+      
     Alert.alert(
-      'Xác nhận thay đổi',
-      `Bạn có chắc chắn muốn ${actionText} tài khoản của sinh viên ${student?.name}?`,
+      language === 'en' ? 'Confirm Status Change' : 'Xác nhận thay đổi',
+      language === 'en'
+        ? `Are you sure you want to ${actionText} account for ${student?.name}?`
+        : `Bạn có chắc chắn muốn ${actionText} tài khoản của sinh viên ${student?.name}?`,
       [
-        { text: 'Hủy', style: 'cancel' },
+        { text: t('cancel', language), style: 'cancel' },
         {
-          text: 'Đồng ý',
+          text: t('confirm', language),
           onPress: async () => {
             if (!student) return;
             setIsAssigning(true);
             try {
               await toggleUser(student.id);
-              Alert.alert('Thành công', `Đã ${actionText} tài khoản thành công!`);
+              Alert.alert(t('success', language), language === 'en' ? 'Account status changed successfully!' : 'Đã thay đổi trạng thái tài khoản thành công!');
             } catch (e) {
-              Alert.alert('Thất bại', 'Không thể thay đổi trạng thái tài khoản.');
+              Alert.alert(t('error', language), language === 'en' ? 'Failed to update status.' : 'Không thể thay đổi trạng thái tài khoản.');
             } finally {
               setIsAssigning(false);
             }
@@ -53,9 +61,9 @@ export const AdminStudentDetailScreen = () => {
   if (!student) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header title="Hồ Sơ Sinh Viên" showBack />
+        <Header title={t('studentProfile', language)} showBack />
         <View style={styles.errorContainer}>
-          <Text style={[styles.errorText, { color: colors.text }]}>Không tìm thấy thông tin sinh viên.</Text>
+          <Text style={[styles.errorText, { color: colors.text }]}>{language === 'en' ? 'Student not found.' : 'Không tìm thấy thông tin sinh viên.'}</Text>
         </View>
       </SafeAreaView>
     );
@@ -69,19 +77,21 @@ export const AdminStudentDetailScreen = () => {
     if (!targetRoom) return;
 
     Alert.alert(
-      'Xác nhận xếp phòng',
-      `Xếp sinh viên ${student.name} vào phòng ${targetRoom.name} (${targetRoom.block})?`,
+      t('assignRoom', language),
+      language === 'en'
+        ? `Assign ${student.name} to ${formatRoomTitle(targetRoom.name, language)} (${targetRoom.block})?`
+        : `Xếp sinh viên ${student.name} vào phòng ${targetRoom.name} (${targetRoom.block})?`,
       [
-        { text: 'Hủy', style: 'cancel' },
+        { text: t('cancel', language), style: 'cancel' },
         {
-          text: 'Đồng ý',
+          text: t('confirm', language),
           onPress: () => {
             setIsAssigning(true);
             setTimeout(() => {
               setIsAssigning(false);
               assignRoom(student.id, roomId);
-              Alert.alert('Thành công', `Đã xếp phòng ${targetRoom.name} cho sinh viên ${student.name}!`);
-            }, 800);
+              Alert.alert(t('success', language), language === 'en' ? `Assigned to ${formatRoomTitle(targetRoom.name, language)}!` : `Đã xếp phòng ${targetRoom.name} cho sinh viên ${student.name}!`);
+            }, 600);
           }
         }
       ]
@@ -90,19 +100,21 @@ export const AdminStudentDetailScreen = () => {
 
   const handleRemoveRoom = () => {
     Alert.alert(
-      'Hủy xếp phòng',
-      `Bạn có chắc chắn muốn rút sinh viên ${student.name} ra khỏi phòng ${student.roomName}?`,
+      t('removeRoom', language),
+      language === 'en'
+        ? `Are you sure you want to remove ${student.name} from ${formatRoomTitle(student.roomName, language)}?`
+        : `Bạn có chắc chắn muốn rút sinh viên ${student.name} ra khỏi phòng ${student.roomName}?`,
       [
-        { text: 'Hủy', style: 'cancel' },
+        { text: t('cancel', language), style: 'cancel' },
         {
-          text: 'Rút phòng',
+          text: language === 'en' ? 'Remove' : 'Rút phòng',
           onPress: () => {
             setIsAssigning(true);
             setTimeout(() => {
               setIsAssigning(false);
               assignRoom(student.id, '');
-              Alert.alert('Thành công', `Đã rút phòng của sinh viên ${student.name}!`);
-            }, 800);
+              Alert.alert(t('success', language), language === 'en' ? 'Room assignment removed!' : `Đã rút phòng của sinh viên ${student.name}!`);
+            }, 600);
           }
         }
       ]
@@ -120,17 +132,17 @@ export const AdminStudentDetailScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title="Hồ Sơ Sinh Viên" showBack />
+      <Header title={t('studentProfile', language)} showBack />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
         {/* Student Avatar Card */}
         <Card style={styles.profileCard}>
           <View style={styles.profileHeaderRow}>
-            <Text style={styles.profileAvatarEmoji}>🎓</Text>
+            <BadgeIcon name="profile" color={colors.primary} size={54} />
             <View style={styles.profileMainInfo}>
               <Text style={[styles.profileName, { color: colors.text }]}>{student.name}</Text>
               <Text style={[styles.profileSub, { color: colors.textSecondary }]}>
-                MSSV: {student.studentId} | Lớp: {student.class}
+                {t('studentId', language)}: {student.studentId} | {t('class', language)}: {student.class}
               </Text>
               <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(student.status)}15`, alignSelf: 'flex-start' }]}>
                 <Text style={[styles.statusBadgeText, { color: getStatusColor(student.status) }]}>{student.status}</Text>
@@ -142,22 +154,22 @@ export const AdminStudentDetailScreen = () => {
 
           {/* Contact details */}
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Email:</Text>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{t('email', language)}:</Text>
             <Text style={[styles.infoVal, { color: colors.text }]}>{student.email}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Số điện thoại:</Text>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{t('phoneNumber', language)}:</Text>
             <Text style={[styles.infoVal, { color: colors.text }]}>{student.phone}</Text>
           </View>
           <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Giới tính:</Text>
+            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{t('gender', language)}:</Text>
             <Text style={[styles.infoVal, { color: colors.text }]}>{student.gender}</Text>
           </View>
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           <Button
-            title={student.status === 'Chờ duyệt' ? "Phê duyệt tài khoản (Approve)" : "Tạm khóa tài khoản (Deactivate)"}
+            title={student.status === 'Chờ duyệt' ? t('approveStudent', language) : t('deactivateStudent', language)}
             onPress={handleToggleStatus}
             loading={isAssigning}
             variant={student.status === 'Chờ duyệt' ? "primary" : "danger"}
@@ -166,24 +178,26 @@ export const AdminStudentDetailScreen = () => {
         </Card>
 
         {/* Room Assignment Management */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Trạng thái phòng ở</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('roomStatus', language)}</Text>
         <Card style={styles.roomMgmtCard}>
           {student.roomId ? (
             <View>
               <View style={styles.roomAssignedRow}>
                 <View>
-                  <Text style={[styles.roomLabelText, { color: colors.textSecondary }]}>Đang lưu trú tại</Text>
+                  <Text style={[styles.roomLabelText, { color: colors.textSecondary }]}>
+                    {language === 'en' ? 'Currently residing in' : 'Đang lưu trú tại'}
+                  </Text>
                   <Text style={[styles.roomValueText, { color: colors.primary }]}>
-                    Phòng {student.roomName} ({student.block})
+                    {formatRoomTitle(student.roomName, language)} ({student.block})
                   </Text>
                   <Text style={[styles.contractText, { color: colors.textSecondary }]}>
-                    Hợp đồng: {student.contractStart} - {student.contractEnd}
+                    {t('contractPeriod', language)}: {student.contractStart} - {student.contractEnd}
                   </Text>
                 </View>
-                <Text style={styles.homeEmoji}>🔑</Text>
+                <BadgeIcon name="room" color={colors.primary} size={40} />
               </View>
               <Button
-                title="Hủy xếp phòng / Trả phòng"
+                title={t('removeRoom', language)}
                 onPress={handleRemoveRoom}
                 loading={isAssigning}
                 variant="danger"
@@ -193,13 +207,13 @@ export const AdminStudentDetailScreen = () => {
           ) : (
             <View>
               <Text style={[styles.noRoomText, { color: colors.textSecondary }]}>
-                Sinh viên này hiện tại chưa được xếp phòng ở.
+                {t('notAssignedStudent', language)}
               </Text>
               
-              <Text style={[styles.selectLabel, { color: colors.text }]}>Chọn phòng trống để xếp:</Text>
+              <Text style={[styles.selectLabel, { color: colors.text }]}>{t('selectRoomToAssign', language)}</Text>
               {availableRooms.length === 0 ? (
                 <Text style={[styles.errorSelectText, { color: colors.danger }]}>
-                  Không có phòng nào còn giường trống phù hợp.
+                  {t('noAvailableRooms', language)}
                 </Text>
               ) : (
                 <View style={styles.roomsAssignGrid}>
@@ -210,10 +224,10 @@ export const AdminStudentDetailScreen = () => {
                       onPress={() => handleAssignRoom(room.id)}
                     >
                       <Text style={[styles.roomOptionText, { color: colors.text }]}>
-                        {room.name} ({room.block})
+                        {formatRoomTitle(room.name, language)} ({room.block})
                       </Text>
                       <Text style={[styles.roomOptionBedCount, { color: colors.primary }]}>
-                        Còn {room.capacity - room.occupied} chỗ
+                        {language === 'en' ? `${room.capacity - room.occupied} beds left` : `Còn ${room.capacity - room.occupied} chỗ`}
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -224,16 +238,16 @@ export const AdminStudentDetailScreen = () => {
         </Card>
 
         {/* Violations Log */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Nhật ký vi phạm nội quy ({student.violations.length})</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('violationsLog', language)} ({student.violations.length})</Text>
         <Card style={styles.violationsCard}>
           {student.violations.length === 0 ? (
             <Text style={[styles.noViolationText, { color: colors.success }]}>
-              Sinh viên có lịch sử lưu trú tốt, không có vi phạm nào.
+              {t('noViolations', language)}
             </Text>
           ) : (
             student.violations.map((violation, index) => (
               <View key={index} style={styles.violationItem}>
-                <Text style={styles.violationDot}>⚠️</Text>
+                <Icon name="alert" size={16} color={colors.danger} style={{ marginRight: SPACING.sm, marginTop: 2 }} />
                 <Text style={[styles.violationText, { color: colors.text }]}>{violation}</Text>
               </View>
             ))
@@ -270,12 +284,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  profileAvatarEmoji: {
-    fontSize: 54,
-    marginRight: SPACING.md,
-  },
   profileMainInfo: {
     flex: 1,
+    marginLeft: SPACING.md,
   },
   profileName: {
     fontSize: SIZES.fontXl,
@@ -335,9 +346,6 @@ const styles = StyleSheet.create({
   contractText: {
     fontSize: SIZES.fontXs,
   },
-  homeEmoji: {
-    fontSize: 36,
-  },
   noRoomText: {
     fontSize: SIZES.fontSm,
     textAlign: 'center',
@@ -385,11 +393,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginVertical: 4,
-  },
-  violationDot: {
-    fontSize: 14,
-    marginRight: SPACING.sm,
-    marginTop: 2,
   },
   violationText: {
     flex: 1,

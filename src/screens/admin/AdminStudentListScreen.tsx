@@ -14,9 +14,10 @@ import { Header } from '../../components/Header';
 import { Input } from '../../components/Input';
 import { Icon } from '../../components/Icon';
 import { COLORS, SIZES, SPACING } from '../../theme/theme';
+import { t, formatRoomTitle, formatGenericValue } from '../../i18n/translations';
 
 export const AdminStudentListScreen = () => {
-  const { theme, students, navigate } = useApp();
+  const { theme, language, students, navigate } = useApp();
   const colors = COLORS[theme];
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -48,14 +49,23 @@ export const AdminStudentListScreen = () => {
     }
   };
 
+  const getStatusLabel = (status: string) => {
+    if (language === 'en') {
+      if (status === 'Đang ở') return 'Resident';
+      if (status === 'Chờ duyệt') return 'Pending';
+      if (status === 'Đã rời KTX') return 'Left';
+    }
+    return status;
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title="Quản Lý Sinh Viên" />
+      <Header title={t('studentList', language)} showBack />
 
       {/* Search Bar & Status Filters */}
       <View style={[styles.searchContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <Input
-          placeholder="Tìm theo tên SV, MSSV, Phòng..."
+          placeholder={t('searchStudentPlaceholder', language)}
           value={searchQuery}
           onChangeText={setSearchQuery}
           icon="search"
@@ -79,7 +89,7 @@ export const AdminStudentListScreen = () => {
                 { color: colors.text },
                 selectedStatusFilter === st && { color: '#FFFFFF' }
               ]}>
-                {st === 'All' ? 'Tất cả trạng thái' : st}
+                {st === 'All' ? (language === 'en' ? 'All Statuses' : 'Tất cả trạng thái') : getStatusLabel(st)}
               </Text>
             </TouchableOpacity>
           ))}
@@ -89,15 +99,14 @@ export const AdminStudentListScreen = () => {
       {/* Student List */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={[styles.listTitle, { color: colors.text }]}>
-          Danh sách sinh viên ({filteredStudents.length})
+          {language === 'en' ? `Student List (${filteredStudents.length})` : `Danh sách sinh viên (${filteredStudents.length})`}
         </Text>
 
         {filteredStudents.length === 0 ? (
           <Card style={styles.emptyCard}>
-            <BadgeIcon name="users" color={colors.textSecondary} size={44} style={{ marginBottom: SPACING.md }} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>Không tìm thấy sinh viên</Text>
-            <Text style={[styles.emptyDesc, { color: colors.textSecondary }]}>
-              Vui lòng kiểm tra lại từ khóa tìm kiếm hoặc thay đổi bộ lọc trạng thái.
+            <Icon name="inbox" size={44} color={colors.textSecondary} style={{ marginBottom: SPACING.md }} />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>
+              {language === 'en' ? 'No students found' : 'Không tìm thấy sinh viên'}
             </Text>
           </Card>
         ) : (
@@ -112,19 +121,19 @@ export const AdminStudentListScreen = () => {
                 <View style={styles.studentInfo}>
                   <Text style={[styles.studentName, { color: colors.text }]}>{student.name}</Text>
                   <Text style={[styles.studentSub, { color: colors.textSecondary }]}>
-                    MSSV: {student.studentId} | Lớp: {student.class}
+                    {t('studentId', language)}: {formatGenericValue(student.studentId, language)} | {t('class', language)}: {formatGenericValue(student.class, language)}
                   </Text>
                   <Text style={[styles.roomLabel, { color: colors.primary }]}>
-                    Phòng: {student.roomName} {student.block ? `(${student.block})` : ''}
+                    {formatRoomTitle(student.roomName, language)} {student.block ? `(${student.block})` : ''}
                   </Text>
                 </View>
                 <View style={styles.rightColumn}>
                   <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(student.status)}15` }]}>
                     <Text style={[styles.statusText, { color: getStatusColor(student.status) }]}>
-                      {student.status}
+                      {getStatusLabel(student.status)}
                     </Text>
                   </View>
-                  <Icon name="back" color={colors.primary} size={16} style={{ transform: [{ rotate: '180deg' }], marginTop: 6 }} />
+                  <Icon name="chevron-right" color={colors.primary} size={16} style={{ marginTop: 6 }} />
                 </View>
               </View>
             </Card>
@@ -176,10 +185,6 @@ const styles = StyleSheet.create({
     fontSize: SIZES.fontLg,
     fontWeight: '700',
     marginBottom: SPACING.xs,
-  },
-  emptyDesc: {
-    fontSize: SIZES.fontSm,
-    textAlign: 'center',
   },
   studentCard: {
     marginBottom: SPACING.xs,

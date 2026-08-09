@@ -4,10 +4,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import { COLORS } from '../theme/theme';
 import { Icon } from './Icon';
+import { t } from '../i18n/translations';
 
 export const BottomTabBar = () => {
   const insets = useSafeAreaInsets();
-  const { currentScreen, currentRole, theme, navigate } = useApp();
+  const { currentScreen, currentRole, theme, language, navigate } = useApp();
   const colors = COLORS[theme];
 
   const handleTabPress = (screen: string) => {
@@ -16,10 +17,10 @@ export const BottomTabBar = () => {
 
   const renderStudentTabs = () => {
     const tabs = [
-      { id: 'StudentHome', label: 'Trang chủ', icon: 'home' },
-      { id: 'StudentRoom', label: 'Phòng ở', icon: 'room' },
-      { id: 'StudentInvoiceList', label: 'Hóa đơn', icon: 'invoice' },
-      { id: 'Profile', label: 'Tài khoản', icon: 'profile' },
+      { id: 'StudentHome', label: t('home', language), icon: 'home' },
+      { id: 'StudentRoom', label: t('room', language), icon: 'room' },
+      { id: 'StudentInvoiceList', label: t('invoice', language), icon: 'invoice' },
+      { id: 'Profile', label: t('account', language), icon: 'profile' },
     ] as const;
 
     return tabs.map(tab => {
@@ -45,10 +46,10 @@ export const BottomTabBar = () => {
 
   const renderAdminTabs = () => {
     const tabs = [
-      { id: 'AdminHome', label: 'Trang chủ', icon: 'home' },
-      { id: 'AdminRoomList', label: 'Phòng', icon: 'room' },
-      { id: 'AdminStudentList', label: 'Sinh viên', icon: 'users' },
-      { id: 'Profile', label: 'Hồ sơ', icon: 'profile' },
+      { id: 'AdminHome', label: t('home', language), icon: 'home' },
+      { id: 'AdminRoomList', label: language === 'en' ? 'Rooms' : 'Phòng', icon: 'room' },
+      { id: 'AdminStudentList', label: language === 'en' ? 'Students' : 'Sinh viên', icon: 'users' },
+      { id: 'Profile', label: t('account', language), icon: 'profile' },
     ] as const;
 
     return tabs.map(tab => {
@@ -72,7 +73,7 @@ export const BottomTabBar = () => {
     });
   };
 
-  // Do not show bottom tab bar on auth screens
+  // Do not show bottom tab bar on auth screens or sub-modals
   const authScreens = ['Welcome', 'Login', 'Register', 'ForgotPassword'];
   if (authScreens.includes(currentScreen)) {
     return null;

@@ -20,6 +20,7 @@ export interface Room {
   id: string;
   name: string;
   block: string;
+  floor?: string;
   type: string; // "4 giường" | "8 giường"
   price: number;
   occupied: number;

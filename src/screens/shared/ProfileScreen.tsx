@@ -14,36 +14,32 @@ import { BadgeIcon } from '../../components/BadgeIcon';
 import { Header } from '../../components/Header';
 import { Icon } from '../../components/Icon';
 import { COLORS, SIZES, SPACING } from '../../theme/theme';
+import { t } from '../../i18n/translations';
 
 export const ProfileScreen = () => {
-  const { theme, currentUser, currentRole, switchRole, reset, navigate } = useApp();
+  const { theme, language, currentUser, currentRole, reset, navigate } = useApp();
   const colors = COLORS[theme];
 
   const handleLogout = () => {
     Alert.alert(
-      'Xác nhận đăng xuất',
-      'Bạn có chắc chắn muốn đăng xuất khỏi ứng dụng?',
+      t('logout', language),
+      t('logoutConfirm', language),
       [
-        { text: 'Hủy', style: 'cancel' },
+        { text: t('cancel', language), style: 'cancel' },
         {
-          text: 'Đăng xuất',
+          text: t('logout', language),
+          style: 'destructive',
           onPress: () => {
             reset('Welcome');
-            Alert.alert('Đã đăng xuất', 'Đã xóa phiên làm việc thành công!');
           }
         }
       ]
     );
   };
 
-  const handleSwitchRole = () => {
-    const nextRole = currentRole === 'student' ? 'manager' : 'student';
-    switchRole(nextRole);
-  };
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title="Tài Khoản" />
+      <Header title={t('account', language)} showBack />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
         {/* User Card */}
@@ -51,11 +47,11 @@ export const ProfileScreen = () => {
           <View style={styles.profileHeaderRow}>
             <BadgeIcon name="profile" color={colors.primary} size={48} />
             <View style={styles.infoCol}>
-              <Text style={[styles.profileName, { color: colors.text }]}>{currentUser.name}</Text>
-              <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>{currentUser.email}</Text>
+              <Text style={[styles.profileName, { color: colors.text }]}>{currentUser?.name || currentUser?.fullName || 'Người dùng'}</Text>
+              <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>{currentUser?.email}</Text>
               <View style={[styles.roleBadge, { backgroundColor: currentRole === 'student' ? `${colors.primary}15` : `${colors.danger}15` }]}>
                 <Text style={[styles.roleText, { color: currentRole === 'student' ? colors.primary : colors.danger }]}>
-                  {currentRole === 'student' ? 'Sinh Viên' : 'Ban Quản Lý'}
+                  {currentRole === 'student' ? t('student', language) : t('manager', language)}
                 </Text>
               </View>
             </View>
@@ -63,14 +59,14 @@ export const ProfileScreen = () => {
         </Card>
 
         {/* Account Settings Menu */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Thông tin cá nhân</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile', language)}</Text>
         <Card style={styles.menuCard}>
           <TouchableOpacity style={styles.menuItem} onPress={() => navigate('EditProfile')}>
             <View style={styles.menuItemLeft}>
               <Icon name="edit" color={colors.textSecondary} size={18} style={{ marginRight: SPACING.sm }} />
-              <Text style={[styles.menuLabel, { color: colors.text }]}>Chỉnh sửa hồ sơ</Text>
+              <Text style={[styles.menuLabel, { color: colors.text }]}>{t('editProfile', language)}</Text>
             </View>
-            <Icon name="back" color={colors.textSecondary} size={16} style={{ transform: [{ rotate: '180deg' }] }} />
+            <Icon name="chevron-right" color={colors.textSecondary} size={16} />
           </TouchableOpacity>
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -78,9 +74,9 @@ export const ProfileScreen = () => {
           <TouchableOpacity style={styles.menuItem} onPress={() => navigate('Settings')}>
             <View style={styles.menuItemLeft}>
               <Icon name="settings" color={colors.textSecondary} size={18} style={{ marginRight: SPACING.sm }} />
-              <Text style={[styles.menuLabel, { color: colors.text }]}>Thiết lập ứng dụng</Text>
+              <Text style={[styles.menuLabel, { color: colors.text }]}>{t('settings', language)}</Text>
             </View>
-            <Icon name="back" color={colors.textSecondary} size={16} style={{ transform: [{ rotate: '180deg' }] }} />
+            <Icon name="chevron-right" color={colors.textSecondary} size={16} />
           </TouchableOpacity>
 
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -88,16 +84,16 @@ export const ProfileScreen = () => {
           <TouchableOpacity style={styles.menuItem} onPress={() => navigate('About')}>
             <View style={styles.menuItemLeft}>
               <Icon name="info" color={colors.textSecondary} size={18} style={{ marginRight: SPACING.sm }} />
-              <Text style={[styles.menuLabel, { color: colors.text }]}>Thông tin ứng dụng</Text>
+              <Text style={[styles.menuLabel, { color: colors.text }]}>{t('aboutApp', language)}</Text>
             </View>
-            <Icon name="back" color={colors.textSecondary} size={16} style={{ transform: [{ rotate: '180deg' }] }} />
+            <Icon name="chevron-right" color={colors.textSecondary} size={16} />
           </TouchableOpacity>
         </Card>
 
         {/* Logout Button */}
         <TouchableOpacity style={[styles.logoutBtn, { borderColor: `${colors.danger}40`, backgroundColor: `${colors.danger}0A` }]} onPress={handleLogout}>
           <Icon name="logout" color={colors.danger} size={18} style={{ marginRight: SPACING.xs }} />
-          <Text style={[styles.logoutText, { color: colors.danger }]}>Đăng Xuất Tài Khoản</Text>
+          <Text style={[styles.logoutText, { color: colors.danger }]}>{t('logout', language)}</Text>
         </TouchableOpacity>
 
       </ScrollView>
@@ -129,34 +125,34 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   profileEmail: {
-    fontSize: SIZES.fontSm,
+    fontSize: SIZES.fontXs,
     marginTop: 2,
   },
   roleBadge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: SIZES.radiusSm,
+    paddingHorizontal: 8,
+    borderRadius: 8,
     marginTop: 6,
   },
   roleText: {
-    fontSize: SIZES.fontXs,
+    fontSize: 10,
     fontWeight: '700',
   },
   sectionTitle: {
-    fontSize: SIZES.fontLg,
+    fontSize: SIZES.fontMd,
     fontWeight: '700',
     marginTop: SPACING.lg,
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.xs,
   },
   menuCard: {
-    paddingVertical: 4,
+    paddingVertical: SPACING.xs,
   },
   menuItem: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: SPACING.sm + 2,
+    alignItems: 'center',
+    paddingVertical: SPACING.md - 2,
     paddingHorizontal: SPACING.sm,
   },
   menuItemLeft: {
@@ -165,19 +161,18 @@ const styles = StyleSheet.create({
   },
   menuLabel: {
     fontSize: SIZES.fontSm,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   divider: {
     height: 1,
-    marginHorizontal: SPACING.sm,
   },
   logoutBtn: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    height: 48,
-    borderRadius: SIZES.radiusLg,
+    alignItems: 'center',
     borderWidth: 1,
+    borderRadius: SIZES.radiusSm,
+    paddingVertical: SPACING.md - 2,
     marginTop: SPACING.xl,
   },
   logoutText: {

@@ -10,9 +10,10 @@ import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/Card';
 import { Header } from '../../components/Header';
 import { COLORS, SIZES, SPACING } from '../../theme/theme';
+import { t } from '../../i18n/translations';
 
 export const NotificationDetailScreen = () => {
-  const { theme, screenParams } = useApp();
+  const { theme, language, screenParams } = useApp();
   const colors = COLORS[theme];
 
   const { announcement } = screenParams;
@@ -20,9 +21,9 @@ export const NotificationDetailScreen = () => {
   if (!announcement) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header title="Chi Tiết Thông Báo" showBack />
+        <Header title={language === 'en' ? 'Announcement Details' : 'Chi Tiết Thông Báo'} showBack />
         <View style={styles.errorContainer}>
-          <Text style={[styles.errorText, { color: colors.text }]}>Không tìm thấy thông báo này.</Text>
+          <Text style={[styles.errorText, { color: colors.text }]}>{language === 'en' ? 'Announcement not found.' : 'Không tìm thấy thông báo này.'}</Text>
         </View>
       </SafeAreaView>
     );
@@ -30,17 +31,17 @@ export const NotificationDetailScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title="Chi Tiết Thông Báo" showBack />
+      <Header title={language === 'en' ? 'Announcement Details' : 'Chi Tiết Thông Báo'} showBack />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Card style={styles.card}>
           <View style={styles.headerRow}>
             {announcement.priority === 'important' && (
               <View style={styles.importantBadge}>
-                <Text style={styles.importantBadgeText}>QUAN TRỌNG</Text>
+                <Text style={styles.importantBadgeText}>{t('important', language)}</Text>
               </View>
             )}
             <Text style={[styles.dateText, { color: colors.textSecondary }]}>
-              Đăng ngày: {announcement.date}
+              {language === 'en' ? 'Posted on' : 'Đăng ngày'}: {announcement.date}
             </Text>
           </View>
 
@@ -53,7 +54,7 @@ export const NotificationDetailScreen = () => {
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
 
           <View style={styles.footerRow}>
-            <Text style={[styles.signatureLabel, { color: colors.textSecondary }]}>Người đăng ký ban hành</Text>
+            <Text style={[styles.signatureLabel, { color: colors.textSecondary }]}>{language === 'en' ? 'Issuer' : 'Người ban hành'}</Text>
             <Text style={[styles.signatureValue, { color: colors.primary }]}>{announcement.author}</Text>
           </View>
         </Card>

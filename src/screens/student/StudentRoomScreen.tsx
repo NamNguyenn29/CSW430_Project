@@ -15,31 +15,32 @@ import { BadgeIcon } from '../../components/BadgeIcon';
 import { Header } from '../../components/Header';
 import { Icon } from '../../components/Icon';
 import { COLORS, SIZES, SPACING } from '../../theme/theme';
+import { t, formatRoomTitle } from '../../i18n/translations';
 
 export const StudentRoomScreen = () => {
-  const { theme, currentUser, students, rooms, navigate } = useApp();
+  const { theme, language, currentUser, students, rooms } = useApp();
   const colors = COLORS[theme];
 
-  const myRoom = rooms.find(r => r.id === currentUser.roomId);
+  const myRoom = rooms.find(r => r.id === currentUser?.roomId);
   const roommates = students.filter(
-    s => s.roomId === currentUser.roomId && s.id !== currentUser.id
+    s => s.roomId === currentUser?.roomId && s.id !== currentUser?.id
   );
 
   const handleContact = (phone: string, name: string) => {
     Alert.alert(
-      `Liên hệ ${name}`,
-      `Chọn phương thức kết nối với ${name}`,
+      language === 'en' ? `Contact ${name}` : `Liên hệ ${name}`,
+      language === 'en' ? `Choose communication method with ${name}` : `Chọn phương thức kết nối với ${name}`,
       [
-        { text: 'Gọi điện', onPress: () => Linking.openURL(`tel:${phone}`).catch(() => Alert.alert('Lỗi', 'Không thể gọi số này')) },
-        { text: 'Gửi tin nhắn SMS', onPress: () => Linking.openURL(`sms:${phone}`).catch(() => Alert.alert('Lỗi', 'Không thể gửi SMS')) },
-        { text: 'Hủy', style: 'cancel' }
+        { text: t('call', language), onPress: () => Linking.openURL(`tel:${phone}`).catch(() => Alert.alert(t('error', language), 'Cannot make phone call')) },
+        { text: t('sms', language), onPress: () => Linking.openURL(`sms:${phone}`).catch(() => Alert.alert(t('error', language), 'Cannot send SMS')) },
+        { text: t('cancel', language), style: 'cancel' }
       ]
     );
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title="Phòng Ở Của Tôi" />
+      <Header title={t('myRoom', language)} showBack />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {myRoom ? (
           <>
@@ -48,9 +49,9 @@ export const StudentRoomScreen = () => {
               <View style={styles.roomHeaderRow}>
                 <View>
                   <Text style={styles.blockLabel}>{myRoom.block}</Text>
-                  <Text style={[styles.roomTitle, { color: colors.text }]}>{myRoom.name}</Text>
+                  <Text style={[styles.roomTitle, { color: colors.text }]}>{formatRoomTitle(myRoom.name, language)}</Text>
                   <Text style={[styles.roomType, { color: colors.textSecondary }]}>
-                    Loại phòng: {myRoom.type}
+                    {t('roomType', language)}: {myRoom.type}
                   </Text>
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: `${colors.success}15` }]}>
@@ -62,13 +63,13 @@ export const StudentRoomScreen = () => {
 
               <View style={styles.roomMetaRow}>
                 <View style={styles.metaItem}>
-                  <Text style={[styles.metaLabel, { color: colors.textSecondary }]}>Giá phòng</Text>
+                  <Text style={[styles.metaLabel, { color: colors.textSecondary }]}>{t('roomPrice', language)}</Text>
                   <Text style={[styles.metaValue, { color: colors.primary }]}>
-                    {myRoom.price.toLocaleString('vi-VN')} đ/tháng
+                    {myRoom.price.toLocaleString('vi-VN')} {language === 'en' ? 'VND/month' : 'đ/tháng'}
                   </Text>
                 </View>
                 <View style={styles.metaItem}>
-                  <Text style={[styles.metaLabel, { color: colors.textSecondary }]}>Thành viên</Text>
+                  <Text style={[styles.metaLabel, { color: colors.textSecondary }]}>{t('members', language)}</Text>
                   <Text style={[styles.metaValue, { color: colors.text }]}>
                     {myRoom.occupied} / {myRoom.capacity}
                   </Text>
@@ -77,12 +78,12 @@ export const StudentRoomScreen = () => {
             </Card>
 
             {/* Utility Indexes */}
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Số chỉ điện nước hiện tại</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('updateMeter', language)}</Text>
             <View style={styles.meterContainer}>
               <Card style={styles.meterBox}>
                 <View style={{ alignItems: 'center' }}>
                   <BadgeIcon name="zap" color="#D97706" size={36} />
-                  <Text style={[styles.meterTitle, { color: colors.textSecondary }]}>Số điện (kWh)</Text>
+                  <Text style={[styles.meterTitle, { color: colors.textSecondary }]}>{t('electricityIndex', language)}</Text>
                   <Text style={[styles.meterValueText, { color: colors.text }]}>
                     {myRoom.electricityIndex}
                   </Text>
@@ -92,7 +93,7 @@ export const StudentRoomScreen = () => {
               <Card style={styles.meterBox}>
                 <View style={{ alignItems: 'center' }}>
                   <BadgeIcon name="droplet" color="#2563EB" size={36} />
-                  <Text style={[styles.meterTitle, { color: colors.textSecondary }]}>Số nước (m³)</Text>
+                  <Text style={[styles.meterTitle, { color: colors.textSecondary }]}>{t('waterIndex', language)}</Text>
                   <Text style={[styles.meterValueText, { color: colors.text }]}>
                     {myRoom.waterIndex}
                   </Text>
@@ -101,10 +102,10 @@ export const StudentRoomScreen = () => {
             </View>
 
             {/* Roommates List */}
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Bạn cùng phòng ({roommates.length})</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('roommates', language)} ({roommates.length})</Text>
             {roommates.length === 0 ? (
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                Chưa có thành viên khác trong phòng này.
+                {t('noRoommates', language)}
               </Text>
             ) : (
               roommates.map(mate => (
@@ -114,7 +115,7 @@ export const StudentRoomScreen = () => {
                     <View style={styles.mateInfo}>
                       <Text style={[styles.mateName, { color: colors.text }]}>{mate.name}</Text>
                       <Text style={[styles.mateClass, { color: colors.textSecondary }]}>
-                        MSSV: {mate.studentId} | Lớp: {mate.class}
+                        {t('studentId', language)}: {mate.studentId} | {t('class', language)}: {mate.class}
                       </Text>
                     </View>
                     <TouchableOpacity
@@ -132,9 +133,9 @@ export const StudentRoomScreen = () => {
           <Card style={styles.noRoomCard}>
             <View style={{ alignItems: 'center' }}>
               <BadgeIcon name="room" color={colors.textSecondary} size={48} style={{ marginBottom: SPACING.md }} />
-              <Text style={[styles.noRoomTitle, { color: colors.text }]}>Chưa có thông tin phòng ở</Text>
+              <Text style={[styles.noRoomTitle, { color: colors.text }]}>{t('noRoomAssigned', language)}</Text>
               <Text style={[styles.noRoomDesc, { color: colors.textSecondary }]}>
-                Bạn hiện chưa được phân phòng hoặc đang đợi ban quản lý kí túc xá xét duyệt đơn lưu trú.
+                {t('noRoomAssignedDesc', language)}
               </Text>
             </View>
           </Card>

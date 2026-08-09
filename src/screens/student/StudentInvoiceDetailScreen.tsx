@@ -12,10 +12,12 @@ import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/Card';
 import { Button } from '../../components/Button';
 import { Header } from '../../components/Header';
+import { Icon } from '../../components/Icon';
 import { COLORS, SIZES, SPACING } from '../../theme/theme';
+import { t, formatRoomTitle, formatMonthPeriod } from '../../i18n/translations';
 
 export const StudentInvoiceDetailScreen = () => {
-  const { theme, screenParams, invoices, payInvoice } = useApp();
+  const { theme, language, screenParams, invoices, payInvoice } = useApp();
   const colors = COLORS[theme];
 
   const { invoiceId } = screenParams;
@@ -25,31 +27,35 @@ export const StudentInvoiceDetailScreen = () => {
   if (!invoice) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <Header title="Hóa Đơn Chi Tiết" showBack />
+        <Header title={t('invoiceDetail', language)} showBack />
         <View style={styles.errorContainer}>
-          <Text style={[styles.errorText, { color: colors.text }]}>Không tìm thấy thông tin hóa đơn này.</Text>
+          <Text style={[styles.errorText, { color: colors.text }]}>{t('noInvoicesFound', language)}</Text>
         </View>
       </SafeAreaView>
     );
   }
 
+  const isPaid = invoice.status === 'Đã thanh toán';
+
   const handlePayment = () => {
     Alert.alert(
-      'Xác nhận thanh toán',
-      `Bạn có chắc chắn muốn thanh toán hóa đơn với số tiền ${invoice.totalFee.toLocaleString('vi-VN')} đ?`,
+      language === 'en' ? 'Confirm Payment' : 'Xác nhận thanh toán',
+      language === 'en'
+        ? `Confirm payment of ${invoice.totalFee.toLocaleString('vi-VN')} VND for this invoice?`
+        : `Bạn có chắc chắn muốn thanh toán hóa đơn với số tiền ${invoice.totalFee.toLocaleString('vi-VN')} đ?`,
       [
-        { text: 'Hủy', style: 'cancel' },
+        { text: t('cancel', language), style: 'cancel' },
         {
-          text: 'Thanh toán',
+          text: t('payNow', language),
           onPress: () => {
             setIsProcessing(true);
             setTimeout(() => {
               setIsProcessing(false);
               payInvoice(invoice.id);
-              Alert.alert('Thanh toán thành công', 'Hóa đơn đã được thanh toán và cập nhật trên hệ thống!');
-            }, 1200);
-          }
-        }
+              Alert.alert(t('success', language), t('paymentSuccess', language));
+            }, 1000);
+          },
+        },
       ]
     );
   };
@@ -63,52 +69,61 @@ export const StudentInvoiceDetailScreen = () => {
     }
   };
 
+  const statusColor = getStatusColor(invoice.status);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title="Hóa Đơn Chi Tiết" showBack />
+      <Header title={t('invoiceDetail', language)} showBack />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Invoice Header */}
         <Card style={styles.infoCard}>
           <View style={styles.row}>
-            <Text style={[styles.title, { color: colors.text }]}>Phòng {invoice.roomName}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(invoice.status)}20` }]}>
-              <Text style={[styles.statusText, { color: getStatusColor(invoice.status) }]}>{invoice.status}</Text>
+            <Text style={[styles.title, { color: colors.text }]}>
+              {formatRoomTitle(invoice.roomName, language)}
+            </Text>
+            <View style={[styles.statusBadge, { backgroundColor: `${statusColor}15` }]}>
+              <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+              <Text style={[styles.statusText, { color: statusColor }]}>
+                {isPaid ? t('paid', language) : t('unpaid', language)}
+              </Text>
             </View>
           </View>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Kỳ hóa đơn: {invoice.month}</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            {t('billingPeriod', language)}: {formatMonthPeriod(invoice.month, language)}
+          </Text>
           {invoice.paidAt && (
             <Text style={[styles.paidAtText, { color: colors.success }]}>
-              Thanh toán ngày: {invoice.paidAt}
+              {language === 'en' ? 'Paid on' : 'Thanh toán ngày'}: {invoice.paidAt}
             </Text>
           )}
         </Card>
 
         {/* Detailed Items breakdown */}
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>Chi tiết khoản phí</Text>
+        <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('invoiceSummary', language)}</Text>
         <Card style={styles.breakdownCard}>
           <View style={styles.breakdownRow}>
-            <Text style={[styles.itemLabel, { color: colors.text }]}>Tiền thuê phòng</Text>
+            <Text style={[styles.itemLabel, { color: colors.text }]}>{t('rentFee', language)}</Text>
             <Text style={[styles.itemValue, { color: colors.text }]}>
               {invoice.rentFee.toLocaleString('vi-VN')} đ
             </Text>
           </View>
           
           <View style={styles.breakdownRow}>
-            <Text style={[styles.itemLabel, { color: colors.text }]}>Tiền điện</Text>
+            <Text style={[styles.itemLabel, { color: colors.text }]}>{t('electricityFee', language)}</Text>
             <Text style={[styles.itemValue, { color: colors.text }]}>
               {invoice.electricityFee.toLocaleString('vi-VN')} đ
             </Text>
           </View>
 
           <View style={styles.breakdownRow}>
-            <Text style={[styles.itemLabel, { color: colors.text }]}>Tiền nước</Text>
+            <Text style={[styles.itemLabel, { color: colors.text }]}>{t('waterFee', language)}</Text>
             <Text style={[styles.itemValue, { color: colors.text }]}>
               {invoice.waterFee.toLocaleString('vi-VN')} đ
             </Text>
           </View>
 
           <View style={styles.breakdownRow}>
-            <Text style={[styles.itemLabel, { color: colors.text }]}>Tiền dịch vụ (Wifi, vệ sinh)</Text>
+            <Text style={[styles.itemLabel, { color: colors.text }]}>{t('serviceFee', language)}</Text>
             <Text style={[styles.itemValue, { color: colors.text }]}>
               {invoice.serviceFee.toLocaleString('vi-VN')} đ
             </Text>
@@ -117,17 +132,19 @@ export const StudentInvoiceDetailScreen = () => {
           <View style={[styles.lineDivider, { backgroundColor: colors.border }]} />
 
           <View style={styles.totalRow}>
-            <Text style={[styles.totalLabel, { color: colors.text }]}>Tổng số tiền phải nộp</Text>
-            <Text style={[styles.totalValue, { color: colors.primary }]}>
+            <Text style={[styles.totalLabel, { color: colors.text }]}>{t('totalFee', language)}</Text>
+            <Text style={[styles.totalValue, { color: isPaid ? colors.success : colors.primary }]}>
               {invoice.totalFee.toLocaleString('vi-VN')} đ
             </Text>
           </View>
         </Card>
 
         {/* QR Code payment or Paid stamp */}
-        {invoice.status !== 'Đã thanh toán' ? (
+        {!isPaid ? (
           <View style={styles.paymentSection}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Quét mã QR để chuyển khoản nhanh</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {language === 'en' ? 'Scan QR Code for Instant Bank Transfer' : 'Quét mã QR để chuyển khoản nhanh'}
+            </Text>
             <Card style={styles.qrCard}>
               <Image
                 source={{ uri: invoice.paymentQrCodeUrl }}
@@ -135,24 +152,30 @@ export const StudentInvoiceDetailScreen = () => {
                 resizeMode="contain"
               />
               <Text style={[styles.qrHelperText, { color: colors.textSecondary }]}>
-                Mở ứng dụng Ngân hàng hoặc Ví điện tử quét mã QR này
+                {language === 'en'
+                  ? 'Open your Banking App or E-Wallet to scan this QR code'
+                  : 'Mở ứng dụng Ngân hàng hoặc Ví điện tử quét mã QR này'}
               </Text>
             </Card>
 
             <Button
-              title="Tôi đã chuyển khoản (Xác nhận)"
+              title={language === 'en' ? 'I have completed transfer (Confirm)' : 'Tôi đã chuyển khoản (Xác nhận)'}
               onPress={handlePayment}
               loading={isProcessing}
               variant="primary"
-              style={{ marginTop: SPACING.md }}
+              style={{ marginTop: SPACING.md, width: '100%' }}
             />
           </View>
         ) : (
           <Card style={[styles.successStampCard, { borderColor: colors.success, backgroundColor: `${colors.success}10` }]}>
-            <Text style={styles.stampIcon}>✅</Text>
-            <Text style={[styles.stampTitle, { color: colors.success }]}>ĐÃ THANH TOÁN THÀNH CÔNG</Text>
+            <Icon name="check" size={36} color={colors.success} style={{ marginBottom: SPACING.xs }} />
+            <Text style={[styles.stampTitle, { color: colors.success }]}>
+              {language === 'en' ? 'PAYMENT COMPLETED' : 'ĐÃ THANH TOÁN THÀNH CÔNG'}
+            </Text>
             <Text style={[styles.stampDesc, { color: colors.text }]}>
-              Cảm ơn bạn! Hóa đơn này đã được ghi nhận thanh toán đầy đủ trên hệ thống quản lý phòng kí túc xá.
+              {language === 'en'
+                ? 'Thank you! This invoice has been marked as fully paid in the dormitory system.'
+                : 'Cảm ơn bạn! Hóa đơn này đã được ghi nhận thanh toán đầy đủ trên hệ thống quản lý phòng kí túc xá.'}
             </Text>
           </Card>
         )}
@@ -167,6 +190,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: SPACING.md,
+    paddingBottom: 80,
   },
   errorContainer: {
     flex: 1,
@@ -178,6 +202,7 @@ const styles = StyleSheet.create({
   },
   infoCard: {
     marginBottom: SPACING.sm,
+    padding: SPACING.md,
   },
   row: {
     flexDirection: 'row',
@@ -194,17 +219,25 @@ const styles = StyleSheet.create({
   },
   paidAtText: {
     fontSize: SIZES.fontXs,
-    fontWeight: '500',
+    fontWeight: '600',
     marginTop: 6,
   },
   statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 4,
     paddingHorizontal: 8,
-    borderRadius: 8,
+    borderRadius: 12,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 4,
   },
   statusText: {
-    fontSize: SIZES.fontXs,
-    fontWeight: 'bold',
+    fontSize: 10,
+    fontWeight: '700',
   },
   sectionTitle: {
     fontSize: SIZES.fontLg,
@@ -213,19 +246,19 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.sm,
   },
   breakdownCard: {
-    paddingVertical: SPACING.md,
+    padding: SPACING.md,
   },
   breakdownRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: SPACING.xs,
+    paddingVertical: 6,
   },
   itemLabel: {
     fontSize: SIZES.fontSm,
   },
   itemValue: {
     fontSize: SIZES.fontSm,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   lineDivider: {
     height: 1,
@@ -242,8 +275,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   totalValue: {
-    fontSize: SIZES.fontLg,
-    fontWeight: 'bold',
+    fontSize: SIZES.fontXl,
+    fontWeight: '800',
   },
   paymentSection: {
     alignItems: 'center',
@@ -270,10 +303,6 @@ const styles = StyleSheet.create({
     padding: SPACING.lg,
     marginTop: SPACING.md,
     borderRadius: SIZES.radiusLg,
-  },
-  stampIcon: {
-    fontSize: 44,
-    marginBottom: SPACING.sm,
   },
   stampTitle: {
     fontSize: SIZES.fontMd,

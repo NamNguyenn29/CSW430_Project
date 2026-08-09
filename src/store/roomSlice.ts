@@ -32,8 +32,30 @@ export const fetchRoomTree = createAsyncThunk(
   'room/fetchRoomTree',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await api.get('/api/building-nodes/tree/4');
-      return response.data.result;
+      // 1. Fetch tree from Level 1 (Building -> Floor -> Room)
+      const tree1Res = await api.get('/api/building-nodes/tree/1').catch(() => null);
+      if (tree1Res?.data?.result && Array.isArray(tree1Res.data.result) && tree1Res.data.result.length > 0) {
+        return tree1Res.data.result;
+      }
+
+      // 2. Fallback to all building nodes list if tree/1 is empty
+      const listRes = await api.get('/api/building-nodes').catch(() => null);
+      if (listRes?.data?.result && Array.isArray(listRes.data.result) && listRes.data.result.length > 0) {
+        return listRes.data.result;
+      }
+
+      // 3. Fallback to tree/3 (Room level) or tree/4
+      const tree3Res = await api.get('/api/building-nodes/tree/3').catch(() => null);
+      if (tree3Res?.data?.result && Array.isArray(tree3Res.data.result) && tree3Res.data.result.length > 0) {
+        return tree3Res.data.result;
+      }
+
+      const tree4Res = await api.get('/api/building-nodes/tree/4').catch(() => null);
+      if (tree4Res?.data?.result && Array.isArray(tree4Res.data.result) && tree4Res.data.result.length > 0) {
+        return tree4Res.data.result;
+      }
+
+      return [];
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || error.message || 'Failed to fetch room tree');
     }

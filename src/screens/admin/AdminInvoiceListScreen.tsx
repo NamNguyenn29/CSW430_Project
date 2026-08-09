@@ -6,57 +6,124 @@ import {
   ScrollView,
   TouchableOpacity,
   SafeAreaView,
+  Alert,
 } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/Card';
 import { BadgeIcon } from '../../components/BadgeIcon';
 import { Header } from '../../components/Header';
+import { Button } from '../../components/Button';
+import { Input } from '../../components/Input';
 import { Icon } from '../../components/Icon';
 import { COLORS, SIZES, SPACING } from '../../theme/theme';
 import { t, formatRoomTitle, formatMonthPeriod } from '../../i18n/translations';
 
-export const StudentInvoiceListScreen = () => {
-  const { theme, language, invoices, navigate } = useApp();
+export const AdminInvoiceListScreen = () => {
+  const { theme, language, invoices, payInvoice, navigate } = useApp();
   const colors = COLORS[theme];
 
   const [activeFilter, setActiveFilter] = useState<'all' | 'unpaid' | 'paid'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const filteredInvoices = invoices.filter(inv => {
-    if (activeFilter === 'unpaid') return inv.status === 'Chưa thanh toán' || inv.status === 'Quá hạn';
-    if (activeFilter === 'paid') return inv.status === 'Đã thanh toán';
-    return true;
+    const matchFilter =
+      activeFilter === 'all'
+        ? true
+        : activeFilter === 'unpaid'
+        ? inv.status === 'Chưa thanh toán' || inv.status === 'Quá hạn'
+        : inv.status === 'Đã thanh toán';
+
+    const matchSearch =
+      !searchQuery.trim() ||
+      inv.roomName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      inv.month.toLowerCase().includes(searchQuery.toLowerCase());
+
+    return matchFilter && matchSearch;
   });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Đã thanh toán': return colors.success;
-      case 'Chưa thanh toán': return colors.warning;
-      case 'Quá hạn': return colors.danger;
-      default: return colors.textSecondary;
+      case 'Đã thanh toán':
+        return colors.success;
+      case 'Chưa thanh toán':
+        return colors.warning;
+      case 'Quá hạn':
+        return colors.danger;
+      default:
+        return colors.textSecondary;
     }
   };
 
-  const unpaidInvoices = invoices.filter(i => i.status !== 'Đã thanh toán');
-  const totalUnpaid = unpaidInvoices.reduce((acc, curr) => acc + curr.totalFee, 0);
+  const handleMarkAsPaid = (invId: string, roomName: string, month: string) => {
+    const roomTitle = formatRoomTitle(roomName, language);
+    const monthTitle = formatMonthPeriod(month, language);
+    Alert.alert(
+      language === 'en' ? 'Confirm Payment' : 'Xác nhận thu tiền',
+      language === 'en'
+        ? `Mark invoice for ${roomTitle} (${monthTitle}) as Paid?`
+        : `Xác nhận đã thu đủ tiền hóa đơn ${roomTitle} (${monthTitle})?`,
+      [
+        { text: t('cancel', language), style: 'cancel' },
+        {
+          text: t('confirm', language),
+          onPress: () => {
+            payInvoice(invId);
+            Alert.alert(
+              t('success', language),
+              t('markPaidSuccess', language)
+            );
+          },
+        },
+      ]
+    );
+  };
+
+  const totalUnpaid = invoices
+    .filter(i => i.status === 'Chưa thanh toán' || i.status === 'Quá hạn')
+    .reduce((sum, i) => sum + i.totalFee, 0);
+
+  const unpaidCount = invoices.filter(i => i.status !== 'Đã thanh toán').length;
+  const paidCount = invoices.filter(i => i.status === 'Đã thanh toán').length;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title={t('myInvoices', language)} showBack />
-      
-      {/* Unpaid Alert Banner if any */}
-      {unpaidInvoices.length > 0 && (
-        <View style={[styles.alertBanner, { backgroundColor: `${colors.danger}12`, borderColor: `${colors.danger}30` }]}>
-          <View style={styles.alertLeft}>
-            <Text style={[styles.alertLabel, { color: colors.danger }]}>{t('unpaidRevenue', language)}</Text>
-            <Text style={[styles.alertValue, { color: colors.danger }]}>{totalUnpaid.toLocaleString('vi-VN')} đ</Text>
-          </View>
-          <View style={[styles.alertBadge, { backgroundColor: colors.danger }]}>
-            <Text style={styles.alertBadgeText}>{t('unpaidCountSummary', language, { count: unpaidInvoices.length })}</Text>
-          </View>
-        </View>
-      )}
+      <Header title={t('allInvoices', language)} showBack />
 
-      {/* Filters bar */}
+      {/* Top Premium Summary Banner */}
+      <View style={[styles.topBanner, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <View style={styles.revenueInfo}>
+          <Text style={[styles.revenueLabel, { color: colors.textSecondary }]}>
+            {t('unpaidRevenue', language)}
+          </Text>
+          <Text style={[styles.revenueValue, { color: colors.danger }]}>
+            {totalUnpaid.toLocaleString('vi-VN')} đ
+          </Text>
+          <Text style={[styles.revenueSub, { color: colors.textSecondary }]}>
+            {t('unpaidCountSummary', language, { count: unpaidCount })}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.createBtn, { backgroundColor: colors.primary }]}
+          onPress={() => navigate('AdminAddInvoice')}
+          activeOpacity={0.85}
+        >
+          <Icon name="plus" color="#FFFFFF" size={16} style={{ marginRight: 6 }} />
+          <Text style={styles.createBtnText}>{t('createInvoice', language)}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Search Input */}
+      <View style={[styles.searchBox, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+        <Input
+          placeholder={t('searchRoomPlaceholder', language)}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          icon="search"
+          containerStyle={{ marginVertical: 0 }}
+        />
+      </View>
+
+      {/* Segmented Filter Tabs */}
       <View style={[styles.filterBar, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity
           style={[styles.filterTab, activeFilter === 'all' && [styles.activeTab, { borderBottomColor: colors.primary }]]}
@@ -71,7 +138,7 @@ export const StudentInvoiceListScreen = () => {
           onPress={() => setActiveFilter('unpaid')}
         >
           <Text style={[styles.filterText, activeFilter === 'unpaid' ? { color: colors.primary, fontWeight: '700' } : { color: colors.textSecondary }]}>
-            {t('unpaid', language)} ({unpaidInvoices.length})
+            {t('unpaid', language)} ({unpaidCount})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -79,11 +146,12 @@ export const StudentInvoiceListScreen = () => {
           onPress={() => setActiveFilter('paid')}
         >
           <Text style={[styles.filterText, activeFilter === 'paid' ? { color: colors.primary, fontWeight: '700' } : { color: colors.textSecondary }]}>
-            {t('paid', language)} ({invoices.filter(i => i.status === 'Đã thanh toán').length})
+            {t('paid', language)} ({paidCount})
           </Text>
         </TouchableOpacity>
       </View>
 
+      {/* Invoices List */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {filteredInvoices.length === 0 ? (
           <Card style={styles.emptyCard}>
@@ -95,19 +163,20 @@ export const StudentInvoiceListScreen = () => {
             const isPaid = inv.status === 'Đã thanh toán';
             const statusColor = getStatusColor(inv.status);
             return (
-              <Card
-                key={inv.id}
-                style={styles.invoiceCard}
-                onPress={() => navigate('StudentInvoiceDetail', { invoiceId: inv.id })}
-              >
+              <Card key={inv.id} style={styles.invoiceCard}>
+                {/* Header of the Invoice Card */}
                 <View style={styles.cardHeader}>
-                  <View style={styles.roomRow}>
-                    <BadgeIcon name="invoice" color={statusColor} size={36} />
-                    <View style={styles.invoiceInfo}>
-                      <Text style={[styles.invoiceTitle, { color: colors.text }]}>
+                  <View style={styles.roomBadgeRow}>
+                    <BadgeIcon
+                      name="invoice"
+                      color={statusColor}
+                      size={36}
+                    />
+                    <View style={styles.roomMeta}>
+                      <Text style={[styles.roomNameText, { color: colors.text }]}>
                         {formatRoomTitle(inv.roomName, language)}
                       </Text>
-                      <Text style={[styles.invoiceMonth, { color: colors.textSecondary }]}>
+                      <Text style={[styles.monthText, { color: colors.textSecondary }]}>
                         {t('billingPeriod', language)}: {formatMonthPeriod(inv.month, language)}
                       </Text>
                     </View>
@@ -115,13 +184,13 @@ export const StudentInvoiceListScreen = () => {
 
                   <View style={[styles.statusBadge, { backgroundColor: `${statusColor}15` }]}>
                     <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-                    <Text style={[styles.statusText, { color: statusColor }]}>
+                    <Text style={[styles.statusBadgeText, { color: statusColor }]}>
                       {isPaid ? t('paid', language) : t('unpaid', language)}
                     </Text>
                   </View>
                 </View>
 
-                {/* Breakdown Mini Bar */}
+                {/* Breakdown Mini Row */}
                 <View style={[styles.breakdownRow, { backgroundColor: theme === 'light' ? '#F8FAFC' : '#1E293B' }]}>
                   <View style={styles.breakdownItem}>
                     <Text style={[styles.breakdownLabel, { color: colors.textSecondary }]}>{t('rentFee', language)}</Text>
@@ -137,17 +206,27 @@ export const StudentInvoiceListScreen = () => {
                   </View>
                 </View>
 
+                {/* Footer with Total and Action Button */}
                 <View style={styles.cardFooter}>
                   <View>
                     <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>{t('totalFee', language)}</Text>
-                    <Text style={[styles.invoiceTotal, { color: isPaid ? colors.success : colors.primary }]}>
+                    <Text style={[styles.totalAmount, { color: isPaid ? colors.success : colors.danger }]}>
                       {inv.totalFee.toLocaleString('vi-VN')} đ
                     </Text>
                   </View>
-                  <View style={styles.detailLink}>
-                    <Text style={[styles.detailLinkText, { color: colors.primary }]}>{t('details', language)}</Text>
-                    <Icon name="chevron-right" size={14} color={colors.primary} style={{ marginLeft: 2 }} />
-                  </View>
+
+                  {!isPaid && (
+                    <TouchableOpacity
+                      style={[styles.payActionBtn, { backgroundColor: `${colors.primary}12`, borderColor: colors.primary }]}
+                      onPress={() => handleMarkAsPaid(inv.id, inv.roomName, inv.month)}
+                      activeOpacity={0.8}
+                    >
+                      <Icon name="check" size={14} color={colors.primary} style={{ marginRight: 4 }} />
+                      <Text style={[styles.payActionText, { color: colors.primary }]}>
+                        {t('markAsPaid', language)}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </Card>
             );
@@ -162,44 +241,53 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  alertBanner: {
+  topBanner: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginHorizontal: SPACING.md,
-    marginTop: SPACING.sm,
-    padding: SPACING.sm + 2,
-    borderRadius: SIZES.radiusSm,
-    borderWidth: 1,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
+    borderBottomWidth: 1,
   },
-  alertLeft: {
+  revenueInfo: {
     flex: 1,
   },
-  alertLabel: {
-    fontSize: 10.5,
-    fontWeight: '700',
+  revenueLabel: {
+    fontSize: 11,
+    fontWeight: '600',
     textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
-  alertValue: {
-    fontSize: SIZES.fontMd,
+  revenueValue: {
+    fontSize: SIZES.fontLg,
     fontWeight: '800',
     marginTop: 2,
   },
-  alertBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  alertBadgeText: {
-    color: '#FFFFFF',
+  revenueSub: {
     fontSize: 10,
+    marginTop: 1,
+  },
+  createBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 9,
+    borderRadius: SIZES.radiusSm + 2,
+  },
+  createBtnText: {
+    color: '#FFFFFF',
+    fontSize: SIZES.fontXs,
     fontWeight: '700',
+  },
+  searchBox: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderBottomWidth: 1,
   },
   filterBar: {
     flexDirection: 'row',
     height: 44,
     borderBottomWidth: 1,
-    marginTop: SPACING.xs,
   },
   filterTab: {
     flex: 1,
@@ -237,20 +325,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  roomRow: {
+  roomBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
-  invoiceInfo: {
+  roomMeta: {
     marginLeft: SPACING.sm,
     flex: 1,
   },
-  invoiceTitle: {
+  roomNameText: {
     fontSize: SIZES.fontMd,
     fontWeight: '700',
   },
-  invoiceMonth: {
+  monthText: {
     fontSize: SIZES.fontXs,
     marginTop: 2,
   },
@@ -267,7 +355,7 @@ const styles = StyleSheet.create({
     borderRadius: 3,
     marginRight: 4,
   },
-  statusText: {
+  statusBadgeText: {
     fontSize: 10,
     fontWeight: '700',
   },
@@ -301,16 +389,20 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '500',
   },
-  invoiceTotal: {
+  totalAmount: {
     fontSize: SIZES.fontMd,
     fontWeight: '800',
   },
-  detailLink: {
+  payActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: SIZES.radiusSm,
+    borderWidth: 1,
   },
-  detailLinkText: {
-    fontSize: SIZES.fontXs,
+  payActionText: {
+    fontSize: 11,
     fontWeight: '700',
   },
 });

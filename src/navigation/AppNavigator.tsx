@@ -20,6 +20,7 @@ import { AdminStudentListScreen } from '../screens/admin/AdminStudentListScreen'
 import { AdminStudentDetailScreen } from '../screens/admin/AdminStudentDetailScreen';
 import { AdminRequestListScreen } from '../screens/admin/AdminRequestListScreen';
 import { AdminAddInvoiceScreen } from '../screens/admin/AdminAddInvoiceScreen';
+import { AdminInvoiceListScreen } from '../screens/admin/AdminInvoiceListScreen';
 
 import { ProfileScreen } from '../screens/shared/ProfileScreen';
 import { EditProfileScreen } from '../screens/shared/EditProfileScreen';
@@ -91,6 +92,8 @@ export const AppNavigator = () => {
         return <AdminRequestListScreen />;
       case 'AdminAddInvoice':
         return <AdminAddInvoiceScreen />;
+      case 'AdminInvoiceList':
+        return <AdminInvoiceListScreen />;
 
       case 'Profile':
         return <ProfileScreen />;

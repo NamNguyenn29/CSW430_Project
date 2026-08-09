@@ -4,13 +4,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useApp } from '../context/AppContext';
 import { COLORS, SIZES, SPACING } from '../theme/theme';
 import { Icon } from './Icon';
+import { t } from '../i18n/translations';
 
 interface HeaderProps {
   title: string;
   showBack?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
+export const Header: React.FC<HeaderProps> = ({ title, showBack }) => {
   const insets = useSafeAreaInsets();
   const {
     theme,
@@ -18,12 +19,69 @@ export const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
     language,
     setLanguage,
     currentRole,
+    currentScreen,
     goBack,
     navigate,
     announcements,
+    navigationStack,
   } = useApp();
 
   const colors = COLORS[theme];
+
+  // Home screens MUST NEVER show the back button and MUST ALWAYS show the role badge
+  const isHomeScreen = currentScreen === 'StudentHome' || currentScreen === 'AdminHome';
+  const shouldShowBack = isHomeScreen
+    ? false
+    : showBack !== undefined
+    ? showBack
+    : navigationStack && navigationStack.length > 1;
+
+  // Translate common screen titles if matching
+  const getDisplayTitle = () => {
+    switch (title) {
+      case 'Trang Chủ':
+      case 'Home':
+        return t('home', language);
+      case 'Phòng Ở Của Tôi':
+      case 'Phòng Ở':
+      case 'My Room':
+        return t('myRoom', language);
+      case 'Hóa Đơn Của Tôi':
+      case 'Hóa Đơn':
+      case 'Invoices':
+        return t('myInvoices', language);
+      case 'Lịch Sử Yêu Cầu':
+      case 'Request History':
+        return t('requestHistory', language);
+      case 'Báo Cáo Hỏng Hóc':
+      case 'Report Incident':
+        return t('reportBroken', language);
+      case 'Tài Khoản':
+      case 'Account':
+        return t('account', language);
+      case 'Thiết Lập':
+      case 'Settings':
+        return t('settings', language);
+      case 'Thông Báo':
+      case 'Notifications':
+        return t('notifications', language);
+      case 'Quản Lý KTX':
+      case 'Dormitory Management':
+        return language === 'en' ? 'Dormitory Admin' : 'Quản Lý KTX';
+      case 'Quản Lý Phòng KTX':
+        return language === 'en' ? 'Room Management' : 'Quản Lý Phòng KTX';
+      case 'Quản Lý Sinh Viên':
+        return language === 'en' ? 'Student Management' : 'Quản Lý Sinh Viên';
+      case 'Quản Lý Sự Cố KTX':
+        return language === 'en' ? 'Incident Management' : 'Quản Lý Sự Cố KTX';
+      case 'Quản Lý Hóa Đơn':
+        return language === 'en' ? 'Invoice Management' : 'Quản Lý Hóa Đơn';
+      case 'Lập Hóa Đơn Mới':
+        return language === 'en' ? 'Create New Invoice' : 'Lập Hóa Đơn Mới';
+      default:
+        return title;
+    }
+  };
 
   return (
     <View
@@ -39,11 +97,12 @@ export const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
     >
       {/* Absolute Left Row */}
       <View style={[styles.leftRow, { top: insets.top }]}>
-        {showBack ? (
+        {shouldShowBack ? (
           <TouchableOpacity
             onPress={goBack}
-            style={styles.iconButton}
+            style={styles.backButton}
             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+            activeOpacity={0.7}
           >
             <Icon name="back" color={colors.text} size={22} />
           </TouchableOpacity>
@@ -51,7 +110,7 @@ export const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
           <View
             style={[
               styles.roleBadge,
-              { backgroundColor: currentRole === 'student' ? `${colors.primary}12` : `${colors.danger}12`, borderColor: currentRole === 'student' ? colors.primary : colors.danger },
+              { backgroundColor: currentRole === 'student' ? `${colors.primary}15` : `${colors.danger}15`, borderColor: currentRole === 'student' ? colors.primary : colors.danger },
             ]}
           >
             <View style={styles.roleContent}>
@@ -62,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
                 style={{ marginRight: 4 }}
               />
               <Text style={[styles.roleText, { color: currentRole === 'student' ? colors.primary : colors.danger }]}>
-                {currentRole === 'student' ? 'Sinh Viên' : 'Quản Lý'}
+                {currentRole === 'student' ? t('student', language) : t('manager', language)}
               </Text>
             </View>
           </View>
@@ -72,7 +131,7 @@ export const Header: React.FC<HeaderProps> = ({ title, showBack = false }) => {
       {/* Centered Title */}
       <View style={styles.titleContainer}>
         <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
-          {title}
+          {getDisplayTitle()}
         </Text>
       </View>
 
@@ -138,7 +197,7 @@ const styles = StyleSheet.create({
     height: 52,
     justifyContent: 'center',
     alignItems: 'center',
-    maxWidth: '50%',
+    maxWidth: '55%',
   },
   title: {
     fontSize: SIZES.fontMd,
@@ -154,6 +213,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   iconButton: {
     padding: SPACING.xs,
@@ -174,7 +240,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   roleText: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '700',
   },
   langToggle: {

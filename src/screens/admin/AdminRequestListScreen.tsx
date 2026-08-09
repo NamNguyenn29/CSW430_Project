@@ -9,12 +9,13 @@ import {
 } from 'react-native';
 import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/Card';
-import { BadgeIcon } from '../../components/BadgeIcon';
 import { Header } from '../../components/Header';
+import { Icon } from '../../components/Icon';
 import { COLORS, SIZES, SPACING } from '../../theme/theme';
+import { t, formatRoomTitle } from '../../i18n/translations';
 
 export const AdminRequestListScreen = () => {
-  const { theme, requests, navigate } = useApp();
+  const { theme, language, requests, navigate } = useApp();
   const colors = COLORS[theme];
 
   const [activeFilter, setActiveFilter] = useState<'Chờ xử lý' | 'Đang xử lý' | 'Đã giải quyết' | 'Tất cả'>('Tất cả');
@@ -33,6 +34,16 @@ export const AdminRequestListScreen = () => {
     }
   };
 
+  const getStatusLabel = (status: string) => {
+    if (language === 'en') {
+      if (status === 'Đã giải quyết') return 'Resolved';
+      if (status === 'Đang xử lý') return 'In Progress';
+      if (status === 'Chờ xử lý') return 'Pending';
+      if (status === 'Tất cả') return 'All';
+    }
+    return status;
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'Cao': return colors.danger;
@@ -42,9 +53,18 @@ export const AdminRequestListScreen = () => {
     }
   };
 
+  const getPriorityLabel = (priority: string) => {
+    if (language === 'en') {
+      if (priority === 'Cao') return 'High';
+      if (priority === 'Trung bình') return 'Medium';
+      if (priority === 'Thấp') return 'Low';
+    }
+    return priority;
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title="Quản Lý Sự Cố KTX" />
+      <Header title={language === 'en' ? 'Incident Management' : 'Quản Lý Sự Cố KTX'} showBack />
 
       {/* Filter Tabs */}
       <View style={[styles.filterBarContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
@@ -62,7 +82,7 @@ export const AdminRequestListScreen = () => {
                 onPress={() => setActiveFilter(filter)}
               >
                 <Text style={[styles.filterText, activeFilter === filter ? { color: '#FFF' } : { color: colors.text }]}>
-                  {filter} ({count})
+                  {getStatusLabel(filter)} ({count})
                 </Text>
               </TouchableOpacity>
             );
@@ -73,15 +93,14 @@ export const AdminRequestListScreen = () => {
       {/* Main List */}
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={[styles.listTitle, { color: colors.text }]}>
-          Danh sách báo hỏng ({filteredRequests.length})
+          {language === 'en' ? `Incident Reports (${filteredRequests.length})` : `Danh sách báo hỏng (${filteredRequests.length})`}
         </Text>
 
         {filteredRequests.length === 0 ? (
           <Card style={styles.emptyCard}>
-            <Text style={styles.emptyEmoji}>🔧</Text>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>Không có sự cố nào</Text>
-            <Text style={[styles.emptyDesc, { color: colors.textSecondary }]}>
-              Không tìm thấy sự cố nào khớp với bộ lọc hiện tại.
+            <Icon name="wrench" size={48} color={colors.textSecondary} style={{ marginBottom: SPACING.sm }} />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>
+              {language === 'en' ? 'No incident reports' : 'Không có sự cố nào'}
             </Text>
           </Card>
         ) : (
@@ -94,7 +113,7 @@ export const AdminRequestListScreen = () => {
               <View style={styles.requestHeader}>
                 <View style={styles.roomBadgeRow}>
                   <Text style={[styles.roomNameText, { color: colors.primary }]}>
-                    Phòng {req.roomName} ({req.block})
+                    {formatRoomTitle(req.roomName, language)} ({req.block})
                   </Text>
                   <Text style={[styles.reporterText, { color: colors.textSecondary }]}>
                     - {req.reporter}
@@ -102,7 +121,7 @@ export const AdminRequestListScreen = () => {
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(req.status)}15` }]}>
                   <Text style={[styles.statusText, { color: getStatusColor(req.status) }]}>
-                    {req.status}
+                    {getStatusLabel(req.status)}
                   </Text>
                 </View>
               </View>
@@ -118,14 +137,17 @@ export const AdminRequestListScreen = () => {
 
               <View style={styles.footerRow}>
                 <View style={styles.priorityContainer}>
-                  <Text style={[styles.footerLabel, { color: colors.textSecondary }]}>Độ ưu tiên: </Text>
+                  <Text style={[styles.footerLabel, { color: colors.textSecondary }]}>{t('priority', language)}: </Text>
                   <Text style={[styles.priorityText, { color: getPriorityColor(req.priority) }]}>
-                    {req.priority}
+                    {getPriorityLabel(req.priority)}
                   </Text>
                 </View>
-                <Text style={[styles.dateText, { color: colors.textSecondary }]}>
-                  {req.createdAt}
-                </Text>
+                <View style={styles.detailLink}>
+                  <Text style={[styles.viewDetailsText, { color: colors.primary }]}>
+                    {t('details', language)}
+                  </Text>
+                  <Icon name="chevron-right" color={colors.primary} size={14} style={{ marginLeft: 2 }} />
+                </View>
               </View>
             </Card>
           ))
@@ -140,7 +162,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   filterBarContainer: {
-    padding: SPACING.md,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.md,
     borderBottomWidth: 1,
   },
   filterTabsRow: {
@@ -148,16 +171,14 @@ const styles = StyleSheet.create({
   },
   filterTab: {
     paddingHorizontal: 12,
-    height: 30,
-    borderRadius: 15,
+    paddingVertical: 6,
+    borderRadius: SIZES.radiusSm,
     borderWidth: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 6,
+    marginRight: SPACING.xs,
   },
   filterText: {
-    fontSize: 10.5,
-    fontWeight: 'bold',
+    fontSize: SIZES.fontXs,
+    fontWeight: '600',
   },
   scrollContent: {
     padding: SPACING.md,
@@ -165,64 +186,58 @@ const styles = StyleSheet.create({
   },
   listTitle: {
     fontSize: SIZES.fontMd,
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginBottom: SPACING.sm,
   },
   emptyCard: {
     alignItems: 'center',
     padding: SPACING.xl,
-    marginTop: SPACING.xl,
-  },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: SPACING.sm,
+    marginTop: SPACING.md,
   },
   emptyTitle: {
-    fontSize: SIZES.fontMd,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  emptyDesc: {
-    fontSize: SIZES.fontXs,
-    textAlign: 'center',
+    fontSize: SIZES.fontLg,
+    fontWeight: '700',
+    marginBottom: SPACING.xs,
   },
   requestCard: {
-    marginVertical: 4,
+    marginBottom: SPACING.sm,
+    padding: SPACING.md,
   },
   requestHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: SPACING.xs,
   },
   roomBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   roomNameText: {
     fontSize: SIZES.fontSm,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   reporterText: {
     fontSize: SIZES.fontXs,
     marginLeft: 4,
   },
   statusBadge: {
+    paddingHorizontal: 8,
     paddingVertical: 3,
-    paddingHorizontal: 6,
-    borderRadius: 8,
+    borderRadius: SIZES.radiusSm,
   },
   statusText: {
-    fontSize: 8.5,
-    fontWeight: 'bold',
+    fontSize: SIZES.fontXs,
+    fontWeight: '700',
   },
   requestTitle: {
-    fontSize: SIZES.fontSm,
-    fontWeight: 'bold',
-    marginVertical: 4,
+    fontSize: SIZES.fontMd,
+    fontWeight: '700',
+    marginTop: SPACING.sm,
   },
   requestDesc: {
-    fontSize: SIZES.fontXs,
+    fontSize: SIZES.fontSm,
+    marginTop: 2,
     lineHeight: 18,
   },
   divider: {
@@ -243,9 +258,14 @@ const styles = StyleSheet.create({
   },
   priorityText: {
     fontSize: SIZES.fontXs,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
-  dateText: {
+  detailLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  viewDetailsText: {
     fontSize: SIZES.fontXs,
+    fontWeight: '700',
   },
 });

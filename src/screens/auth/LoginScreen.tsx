@@ -21,7 +21,7 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { getAuth, signInWithCredential, GoogleAuthProvider } from '@react-native-firebase/auth';
 
 export const LoginScreen = () => {
-  const { theme, navigate } = useApp();
+  const { theme, navigate, reset } = useApp();
   const colors = COLORS[theme];
   const dispatch = useDispatch<AppDispatch>();
   const insets = useSafeAreaInsets();
@@ -67,9 +67,9 @@ export const LoginScreen = () => {
           `Chào mừng ${data.user.fullName} quay trở lại!`
         );
         if (data.role === 'manager') {
-          navigate('AdminHome');
+          reset('AdminHome');
         } else {
-          navigate('StudentHome');
+          reset('StudentHome');
         }
       })
       .catch((err) => {
@@ -107,9 +107,9 @@ export const LoginScreen = () => {
               `Chào mừng ${data.user.fullName} đăng nhập bằng Google Firebase!`
             );
             if (data.role === 'manager') {
-              navigate('AdminHome');
+              reset('AdminHome');
             } else {
-              navigate('StudentHome');
+              reset('StudentHome');
             }
           })
           .catch((err) => {

@@ -10,8 +10,8 @@ import {
 import { useApp } from '../../context/AppContext';
 import { Button } from '../../components/Button';
 import { Input } from '../../components/Input';
+import { Icon } from '../../components/Icon';
 import { COLORS, SIZES, SPACING } from '../../theme/theme';
-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const ForgotPasswordScreen = () => {
@@ -49,7 +49,8 @@ export const ForgotPasswordScreen = () => {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.content, { paddingTop: Math.max(insets.top, SPACING.lg) }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigate('Login')}>
-          <Text style={[styles.backText, { color: colors.primary }]}>⬅️ Quay lại</Text>
+          <Icon name="back" color={colors.primary} size={20} />
+          <Text style={[styles.backText, { color: colors.primary }]}>Quay lại</Text>
         </TouchableOpacity>
 
         <View style={styles.header}>
@@ -71,7 +72,7 @@ export const ForgotPasswordScreen = () => {
               if (error) setError('');
             }}
             error={error}
-            icon="✉️"
+            icon="mail"
           />
 
           <Button
@@ -96,12 +97,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   backBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
-    paddingVertical: SPACING.sm,
+    paddingVertical: SPACING.xs,
   },
   backText: {
-    fontSize: SIZES.fontMd,
+    fontSize: SIZES.fontSm,
     fontWeight: '600',
+    marginLeft: 4,
   },
   header: {
     marginTop: SPACING.md,

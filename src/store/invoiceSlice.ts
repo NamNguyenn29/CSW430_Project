@@ -15,36 +15,49 @@ const initialState: InvoiceState = {
 
 export const fetchInvoices = createAsyncThunk(
   'invoices/fetchInvoices',
-  async (_, { rejectWithValue }) => {
+  async (_, { getState, rejectWithValue }) => {
     try {
-      const response = await api.get('/api/users/me/invoices');
-      const backendInvoices = response.data.result || [];
+      const state: any = getState();
+      const currentRole = state.auth?.currentRole;
+
+      let response: any = null;
+      if (currentRole === 'manager' || currentRole === 'admin') {
+        response = await api.get('/api/invoices').catch(() => null);
+      }
+      
+      // If student or fallback
+      if (!response?.data?.result) {
+        response = await api.get('/api/users/me/invoices').catch(() => null);
+      }
+
+      const backendInvoices = response?.data?.result || [];
       
       return backendInvoices.map((inv: any) => {
         let statusText = 'Chưa thanh toán';
         if (inv.status === 'PAID') statusText = 'Đã thanh toán';
         else if (inv.status === 'OVERDUE') statusText = 'Quá hạn';
 
-        const rentFee = inv.feeCategory === 'ROOM_RENT' ? inv.amount : 0;
-        const electricityFee = inv.feeCategory === 'ELECTRICITY' ? inv.amount : 0;
-        const waterFee = inv.feeCategory === 'WATER' ? inv.amount : 0;
-        const serviceFee = inv.feeCategory === 'SERVICE' ? inv.amount : 0;
+        const amountNum = Number(inv.amount) || 0;
+        const rentFee = inv.feeCategory === 'ROOM_RENT' ? amountNum : 0;
+        const electricityFee = inv.feeCategory === 'ELECTRICITY' ? amountNum : 0;
+        const waterFee = inv.feeCategory === 'WATER' ? amountNum : 0;
+        const serviceFee = inv.feeCategory === 'SERVICE' ? amountNum : 0;
 
         return {
-          id: inv.id?.toString(),
-          roomId: inv.roomId?.toString(),
-          roomName: inv.roomName || 'Unknown',
-          block: inv.blockName || 'Khu A',
-          month: inv.month || '07/2026',
+          id: inv.id?.toString() || Math.random().toString(),
+          roomId: inv.roomId?.toString() || '',
+          roomName: inv.roomName || 'Phòng',
+          block: inv.blockName || 'Tòa A1',
+          month: inv.month || 'Tháng 07/2026',
           rentFee,
           electricityFee,
           waterFee,
           serviceFee,
-          totalFee: inv.amount,
+          totalFee: amountNum,
           status: statusText,
           paymentQrCodeUrl: inv.paymentQrCodeUrl || 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=rent',
           paidAt: inv.paidAt ? new Date(inv.paidAt).toLocaleDateString('vi-VN') : null,
-          notes: inv.notes,
+          notes: inv.notes || '',
         };
       });
     } catch (error: any) {

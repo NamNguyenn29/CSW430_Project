@@ -56,7 +56,7 @@ interface AppContextProps {
   addMaintenanceRequest: (title: string, description: string, category: any, priority: any) => Promise<any>;
   updateRequestStatus: (reqId: string, status: any, note: string) => void;
   payInvoice: (invoiceId: string) => void;
-  addInvoice: (roomId: string, rentFee: number, electricityFee: number, waterFee: number, serviceFee: number, month: string) => void;
+  addInvoice: (roomId: string, rentFee: number, electricityFee: number, waterFee: number, serviceFee: number, month: string) => Promise<{ success: boolean; message?: string }>;
   updateRoomMeter: (roomId: string, waterIndex: number, electricityIndex: number) => void;
   assignRoom: (studentId: string, roomId: string) => void;
   registerStudent: (name: string, studentId: string, email: string, phone: string, gender: any, className: string) => boolean;
@@ -90,27 +90,135 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // Local fallback states for UI screens not fully integrated to backend tables
   // No local state fallbacks for announcements remaining
 
-  // Map room tree nodes to UI Room objects
-  const mappedRooms: Room[] = reduxRoomTree.map((node: any) => {
-    const isFull = node.currentOccupancy >= (node.maxCapacity || 4);
-    let blockName = 'Tòa A1';
-    if (node.parent && node.parent.parent) {
-      blockName = node.parent.parent.name;
-    }
-    return {
-      id: node.id?.toString(),
-      name: node.name,
-      block: blockName,
-      capacity: node.maxCapacity || 4,
-      occupied: node.currentOccupancy || 0,
-      price: 1200000,
-      status: isFull ? 'Đầy' : 'Còn chỗ',
-      type: `${node.maxCapacity || 4} giường`,
-      electricityIndex: 1450,
-      waterIndex: 120,
-      occupants: [],
+  // Robust tree extractor for Building (Level 1) -> Floor (Level 2) -> Room (Level 3)
+  const extractRooms = (nodes: any[]): Room[] => {
+    if (!nodes || !Array.isArray(nodes) || nodes.length === 0) return [];
+
+    const allRooms: Room[] = [];
+    const seenIds = new Set<string>();
+
+    const getArrayFromChildren = (children: any): any[] => {
+      if (!children) return [];
+      if (Array.isArray(children)) return children;
+      if (typeof children === 'object') return Object.values(children);
+      return [];
     };
-  });
+
+    // 1. First attempt: Parse as 3-tier Tree (Building -> Floor -> Room)
+    nodes.forEach((bldgNode: any) => {
+      const bldgName = bldgNode.name || 'Tòa KTX';
+      const floorList = getArrayFromChildren(bldgNode.children);
+
+      if (floorList.length > 0) {
+        floorList.forEach((floorNode: any) => {
+          const floorName = floorNode.name || 'Tầng 1';
+          const roomList = getArrayFromChildren(floorNode.children);
+
+          if (roomList.length > 0) {
+            roomList.forEach((roomNode: any) => {
+              const rId = roomNode.id?.toString() || `${bldgName}-${floorName}-${roomNode.name}`;
+              if (!seenIds.has(rId)) {
+                seenIds.add(rId);
+                const cap = Number(roomNode.maxCapacity) || 4;
+                const occ = Number(roomNode.currentOccupancy) || 0;
+                allRooms.push({
+                  id: rId,
+                  name: roomNode.name || 'Phòng',
+                  block: bldgName,
+                  floor: floorName,
+                  capacity: cap,
+                  occupied: occ,
+                  price: 1200000,
+                  status: occ >= cap ? 'Đầy' : 'Còn chỗ',
+                  type: `${cap} giường`,
+                  electricityIndex: 1450,
+                  waterIndex: 120,
+                  occupants: [],
+                });
+              }
+            });
+          } else {
+            // In case Level 2 itself has room properties
+            const isRoomLike = (floorNode.maxCapacity && Number(floorNode.maxCapacity) > 0) || /^(Phòng|Room|P\.?\s*\d|\d{3})/i.test(floorNode.name || '');
+            if (isRoomLike) {
+              const fId = floorNode.id?.toString() || `${bldgName}-${floorNode.name}`;
+              if (!seenIds.has(fId)) {
+                seenIds.add(fId);
+                const cap = Number(floorNode.maxCapacity) || 4;
+                const occ = Number(floorNode.currentOccupancy) || 0;
+                allRooms.push({
+                  id: fId,
+                  name: floorNode.name || 'Phòng',
+                  block: bldgName,
+                  floor: 'Tầng 1',
+                  capacity: cap,
+                  occupied: occ,
+                  price: 1200000,
+                  status: occ >= cap ? 'Đầy' : 'Còn chỗ',
+                  type: `${cap} giường`,
+                  electricityIndex: 1450,
+                  waterIndex: 120,
+                  occupants: [],
+                });
+              }
+            }
+          }
+        });
+      } else {
+        // Flat node or single room node
+        const isRoomLike = (bldgNode.maxCapacity && Number(bldgNode.maxCapacity) > 0) || /^(Phòng|Room|P\.?\s*\d|\d{3})/i.test(bldgNode.name || '');
+        if (isRoomLike) {
+          const bId = bldgNode.id?.toString() || bldgNode.name;
+          if (!seenIds.has(bId)) {
+            seenIds.add(bId);
+            const cap = Number(bldgNode.maxCapacity) || 4;
+            const occ = Number(bldgNode.currentOccupancy) || 0;
+            allRooms.push({
+              id: bId,
+              name: bldgNode.name || 'Phòng',
+              block: bldgNode.block || 'Tòa A1',
+              floor: 'Tầng 1',
+              capacity: cap,
+              occupied: occ,
+              price: 1200000,
+              status: occ >= cap ? 'Đầy' : 'Còn chỗ',
+              type: `${cap} giường`,
+              electricityIndex: 1450,
+              waterIndex: 120,
+              occupants: [],
+            });
+          }
+        }
+      }
+    });
+
+    // 2. Fallback: If still empty (e.g. all nodes flat without children), convert all valid nodes
+    if (allRooms.length === 0) {
+      nodes.forEach((n: any) => {
+        const id = n.id?.toString() || Math.random().toString();
+        const cap = Number(n.maxCapacity) || 4;
+        const occ = Number(n.currentOccupancy) || 0;
+        allRooms.push({
+          id,
+          name: n.name || 'Phòng',
+          block: n.block || 'Tòa A1',
+          floor: 'Tầng 1',
+          capacity: cap,
+          occupied: occ,
+          price: 1200000,
+          status: occ >= cap ? 'Đầy' : 'Còn chỗ',
+          type: `${cap} giường`,
+          electricityIndex: 1450,
+          waterIndex: 120,
+          occupants: [],
+        });
+      });
+    }
+
+    return allRooms;
+  };
+
+  const mappedRooms: Room[] = extractRooms(reduxRoomTree);
   
   // Navigation states
   const [navigationStack, setNavigationStack] = useState<{ screen: string; params?: any }[]>([
@@ -256,75 +364,98 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     dispatch(payInvoiceBackend(invoiceId));
   };
 
-  const addInvoice = async (roomId: string, rentFee: number, electricityFee: number, waterFee: number, serviceFee: number, month: string) => {
+  const addInvoice = async (roomId: string, rentFee: number, electricityFee: number, waterFee: number, serviceFee: number, month: string): Promise<{ success: boolean; message?: string }> => {
     try {
       // Find room assignment for this room to link invoice correctly on backend
       const assignmentsRes = await api.get('/api/room-assignments');
-      const assignments = assignmentsRes.data.result || [];
-      const now = new Date();
-      const activeAssignment = assignments.find((a: any) => {
-        if (!a.roomNodeId) return false;
-        if (a.roomNodeId.toString().toLowerCase() !== roomId.toString().toLowerCase()) return false;
-        const start = a.startDate ? new Date(a.startDate) : null;
-        if (start && start > now) return false;
-        const end = a.endDate ? new Date(a.endDate) : null;
-        if (end && end < now) return false;
-        return true;
+      const assignments = assignmentsRes.data?.result || [];
+      
+      // Match room assignments for this roomId
+      let matchedAssignments = assignments.filter((a: any) => {
+        if (!a.roomNodeId && !a.roomNode?.id) return false;
+        const assignedRoomId = (a.roomNodeId || a.roomNode?.id)?.toString().toLowerCase();
+        return assignedRoomId === roomId.toString().toLowerCase();
       });
-      if (!activeAssignment) {
-        Alert.alert('Lỗi', 'Không tìm thấy sinh viên đang ở phòng này.');
-        return;
-      }
-      const roomAssignmentId = activeAssignment.id;
 
-      // Create Rent Invoice
-      if (rentFee > 0) {
-        await api.post('/api/invoices', {
-          roomAssignmentId,
-          feeCategory: 'ROOM_RENT',
-          amount: rentFee,
-          month,
-          notes: 'Tiền phòng',
-        });
+      // Fallback matching: match through local student list
+      if (matchedAssignments.length === 0) {
+        const targetRoom = mappedRooms.find(r => r.id === roomId);
+        if (targetRoom) {
+          const matchedStudents = reduxStudents.filter(s => s.roomName === targetRoom.name || s.roomId === roomId);
+          if (matchedStudents.length > 0) {
+            matchedAssignments = assignments.filter((a: any) => 
+              matchedStudents.some(s => s.id === a.userId || s.roomAssignmentId === a.id)
+            );
+          }
+        }
       }
 
-      // Create Electricity Invoice
-      if (electricityFee > 0) {
-        await api.post('/api/invoices', {
-          roomAssignmentId,
-          feeCategory: 'ELECTRICITY',
-          amount: electricityFee,
-          month,
-          notes: 'Tiền điện',
-        });
+      if (matchedAssignments.length === 0) {
+        return {
+          success: false,
+          message: reduxLang === 'en'
+            ? 'Cannot create invoice: No active student is assigned to this room yet. Please assign a student to this room first.'
+            : 'Không thể lập hóa đơn: Phòng này hiện chưa có sinh viên nào đang lưu trú. Vui lòng xếp phòng cho sinh viên trước.'
+        };
       }
 
-      // Create Water Invoice
-      if (waterFee > 0) {
-        await api.post('/api/invoices', {
-          roomAssignmentId,
-          feeCategory: 'WATER',
-          amount: waterFee,
-          month,
-          notes: 'Tiền nước',
-        });
+      // Create invoices for students in this room
+      for (const assignment of matchedAssignments) {
+        const roomAssignmentId = assignment.id;
+
+        // Create Rent Invoice
+        if (rentFee > 0) {
+          await api.post('/api/invoices', {
+            roomAssignmentId,
+            feeCategory: 'ROOM_RENT',
+            amount: rentFee,
+            month,
+            notes: 'Tiền phòng',
+          });
+        }
+
+        // Create Electricity Invoice
+        if (electricityFee > 0) {
+          await api.post('/api/invoices', {
+            roomAssignmentId,
+            feeCategory: 'ELECTRICITY',
+            amount: electricityFee,
+            month,
+            notes: 'Tiền điện',
+          });
+        }
+
+        // Create Water Invoice
+        if (waterFee > 0) {
+          await api.post('/api/invoices', {
+            roomAssignmentId,
+            feeCategory: 'WATER',
+            amount: waterFee,
+            month,
+            notes: 'Tiền nước',
+          });
+        }
+
+        // Create Service Invoice
+        if (serviceFee > 0) {
+          await api.post('/api/invoices', {
+            roomAssignmentId,
+            feeCategory: 'SERVICE',
+            amount: serviceFee,
+            month,
+            notes: 'Phí dịch vụ',
+          });
+        }
       }
 
-      // Create Service Invoice
-      if (serviceFee > 0) {
-        await api.post('/api/invoices', {
-          roomAssignmentId,
-          feeCategory: 'SERVICE',
-          amount: serviceFee,
-          month,
-          notes: 'Phí dịch vụ',
-        });
-      }
-
+      // Immediately refresh invoices & audit logs
       dispatch(fetchInvoices());
+      dispatch(fetchAuditLogs());
+      return { success: true };
     } catch (e: any) {
       console.warn('Failed to add invoice to backend', e);
-      Alert.alert('Lỗi', 'Không thể lập hóa đơn: ' + (e.response?.data?.message || e.message));
+      const errMsg = e.response?.data?.message || e.message || 'Lỗi khi lập hóa đơn';
+      return { success: false, message: errMsg };
     }
   };
 

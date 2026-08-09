@@ -10,17 +10,18 @@ import { useApp } from '../../context/AppContext';
 import { Card } from '../../components/Card';
 import { Header } from '../../components/Header';
 import { COLORS, SIZES, SPACING } from '../../theme/theme';
+import { t } from '../../i18n/translations';
 
 export const NotificationsScreen = () => {
-  const { theme, announcements, navigate } = useApp();
+  const { theme, language, announcements, navigate } = useApp();
   const colors = COLORS[theme];
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      <Header title="Thông Báo" showBack />
+      <Header title={t('notifications', language)} showBack />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={[styles.listTitle, { color: colors.text }]}>
-          Thông báo từ Ban Quản Lý ({announcements.length})
+          {t('announcementsFromBQL', language)} ({announcements.length})
         </Text>
 
         {announcements.map((ann) => (
@@ -33,7 +34,7 @@ export const NotificationsScreen = () => {
               <View style={styles.badgeRow}>
                 {ann.priority === 'important' && (
                   <View style={styles.importantBadge}>
-                    <Text style={styles.importantBadgeText}>Quan trọng</Text>
+                    <Text style={styles.importantBadgeText}>{t('important', language)}</Text>
                   </View>
                 )}
                 <Text style={[styles.authorText, { color: colors.primary }]}>{ann.author}</Text>
