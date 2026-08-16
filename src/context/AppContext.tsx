@@ -106,33 +106,33 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     // 1. First attempt: Parse as 3-tier Tree (Building -> Floor -> Room)
     nodes.forEach((bldgNode: any) => {
-      const bldgName = bldgNode.name || 'Tòa KTX';
+      const bldgName = bldgNode.name || '';
       const floorList = getArrayFromChildren(bldgNode.children);
 
       if (floorList.length > 0) {
         floorList.forEach((floorNode: any) => {
-          const floorName = floorNode.name || 'Tầng 1';
+          const floorName = floorNode.name || '';
           const roomList = getArrayFromChildren(floorNode.children);
 
           if (roomList.length > 0) {
             roomList.forEach((roomNode: any) => {
-              const rId = roomNode.id?.toString() || `${bldgName}-${floorName}-${roomNode.name}`;
-              if (!seenIds.has(rId)) {
+              const rId = roomNode.id?.toString() || (bldgName && floorName && roomNode.name ? `${bldgName}-${floorName}-${roomNode.name}` : roomNode.name);
+              if (rId && !seenIds.has(rId)) {
                 seenIds.add(rId);
-                const cap = Number(roomNode.maxCapacity) || 4;
+                const cap = Number(roomNode.maxCapacity) || 0;
                 const occ = Number(roomNode.currentOccupancy) || 0;
                 allRooms.push({
                   id: rId,
-                  name: roomNode.name || 'Phòng',
+                  name: roomNode.name || '',
                   block: bldgName,
                   floor: floorName,
                   capacity: cap,
                   occupied: occ,
-                  price: 1200000,
-                  status: occ >= cap ? 'Đầy' : 'Còn chỗ',
-                  type: `${cap} giường`,
-                  electricityIndex: 1450,
-                  waterIndex: 120,
+                  price: Number(roomNode.price || roomNode.roomPrice || 0),
+                  status: occ >= cap && cap > 0 ? 'Đầy' : 'Còn chỗ',
+                  type: roomNode.type || (cap > 0 ? `${cap} giường` : ''),
+                  electricityIndex: Number(roomNode.electricityIndex || 0),
+                  waterIndex: Number(roomNode.waterIndex || 0),
                   occupants: [],
                 });
               }
@@ -144,20 +144,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               const fId = floorNode.id?.toString() || `${bldgName}-${floorNode.name}`;
               if (!seenIds.has(fId)) {
                 seenIds.add(fId);
-                const cap = Number(floorNode.maxCapacity) || 4;
+                const cap = Number(floorNode.maxCapacity) || 0;
                 const occ = Number(floorNode.currentOccupancy) || 0;
                 allRooms.push({
                   id: fId,
-                  name: floorNode.name || 'Phòng',
+                  name: floorNode.name || '',
                   block: bldgName,
-                  floor: 'Tầng 1',
+                  floor: floorName,
                   capacity: cap,
                   occupied: occ,
-                  price: 1200000,
-                  status: occ >= cap ? 'Đầy' : 'Còn chỗ',
-                  type: `${cap} giường`,
-                  electricityIndex: 1450,
-                  waterIndex: 120,
+                  price: Number(floorNode.price || 0),
+                  status: occ >= cap && cap > 0 ? 'Đầy' : 'Còn chỗ',
+                  type: floorNode.type || (cap > 0 ? `${cap} giường` : ''),
+                  electricityIndex: Number(floorNode.electricityIndex || 0),
+                  waterIndex: Number(floorNode.waterIndex || 0),
                   occupants: [],
                 });
               }
@@ -171,20 +171,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           const bId = bldgNode.id?.toString() || bldgNode.name;
           if (!seenIds.has(bId)) {
             seenIds.add(bId);
-            const cap = Number(bldgNode.maxCapacity) || 4;
+            const cap = Number(bldgNode.maxCapacity) || 0;
             const occ = Number(bldgNode.currentOccupancy) || 0;
             allRooms.push({
               id: bId,
-              name: bldgNode.name || 'Phòng',
-              block: bldgNode.block || 'Tòa A1',
-              floor: 'Tầng 1',
+              name: bldgNode.name || '',
+              block: bldgNode.block || bldgName || '',
+              floor: bldgNode.floor || '',
               capacity: cap,
               occupied: occ,
-              price: 1200000,
-              status: occ >= cap ? 'Đầy' : 'Còn chỗ',
-              type: `${cap} giường`,
-              electricityIndex: 1450,
-              waterIndex: 120,
+              price: Number(bldgNode.price || 0),
+              status: occ >= cap && cap > 0 ? 'Đầy' : 'Còn chỗ',
+              type: bldgNode.type || (cap > 0 ? `${cap} giường` : ''),
+              electricityIndex: Number(bldgNode.electricityIndex || 0),
+              waterIndex: Number(bldgNode.waterIndex || 0),
               occupants: [],
             });
           }
@@ -196,20 +196,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (allRooms.length === 0) {
       nodes.forEach((n: any) => {
         const id = n.id?.toString() || Math.random().toString();
-        const cap = Number(n.maxCapacity) || 4;
+        const cap = Number(n.maxCapacity) || 0;
         const occ = Number(n.currentOccupancy) || 0;
         allRooms.push({
           id,
-          name: n.name || 'Phòng',
-          block: n.block || 'Tòa A1',
-          floor: 'Tầng 1',
+          name: n.name || '',
+          block: n.block || '',
+          floor: n.floor || '',
           capacity: cap,
           occupied: occ,
-          price: 1200000,
-          status: occ >= cap ? 'Đầy' : 'Còn chỗ',
-          type: `${cap} giường`,
-          electricityIndex: 1450,
-          waterIndex: 120,
+          price: Number(n.price || 0),
+          status: occ >= cap && cap > 0 ? 'Đầy' : 'Còn chỗ',
+          type: n.type || (cap > 0 ? `${cap} giường` : ''),
+          electricityIndex: Number(n.electricityIndex || 0),
+          waterIndex: Number(n.waterIndex || 0),
           occupants: [],
         });
       });
@@ -218,7 +218,30 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return allRooms;
   };
 
-  const mappedRooms: Room[] = extractRooms(reduxRoomTree);
+  const rawRooms: Room[] = extractRooms(reduxRoomTree);
+  const mappedRooms: Room[] = rawRooms.map(r => {
+    // Find active students assigned to this room (by roomId or matching roomName & block)
+    const roomStudents = reduxStudents.filter((s: any) => {
+      if (s.status !== 'Đang ở') return false;
+      if (s.roomId && r.id && s.roomId.toString().toLowerCase() === r.id.toString().toLowerCase()) return true;
+      if (s.roomName && r.name && s.roomName.trim().toLowerCase() === r.name.trim().toLowerCase()) {
+        if (!r.block || !s.block || r.block.trim().toLowerCase() === s.block.trim().toLowerCase()) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    const realOccupied = Math.max(roomStudents.length, r.occupied || 0);
+    const occupantNames = roomStudents.map((s: any) => s.name || s.fullName);
+
+    return {
+      ...r,
+      occupied: realOccupied,
+      status: (realOccupied >= r.capacity && r.capacity > 0) ? 'Đầy' : r.status,
+      occupants: occupantNames.length > 0 ? occupantNames : r.occupants,
+    };
+  });
   
   // Navigation states
   const [navigationStack, setNavigationStack] = useState<{ screen: string; params?: any }[]>([
@@ -292,14 +315,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const reset = (screen: string, params?: any) => {
-    // Role-based route guards
-    if (reduxRole === 'student' && screen.startsWith('Admin')) {
-      console.warn(`Access blocked: Student cannot reset to admin screen: ${screen}`);
-      return;
-    }
-    if (reduxRole === 'manager' && screen.startsWith('Student')) {
-      console.warn(`Access blocked: Manager cannot reset to student screen: ${screen}`);
-      return;
+    // Role-based route guards (do not block when resetting from auth flow screens)
+    const isAuthFlow = ['Welcome', 'Login', 'Register', 'ForgotPassword'].includes(currentScreen);
+    if (!isAuthFlow) {
+      if (reduxRole === 'student' && screen.startsWith('Admin')) {
+        console.warn(`Access blocked: Student cannot reset to admin screen: ${screen}`);
+        return;
+      }
+      if (reduxRole === 'manager' && screen.startsWith('Student')) {
+        console.warn(`Access blocked: Manager cannot reset to student screen: ${screen}`);
+        return;
+      }
     }
 
     setNavigationStack([{ screen, params }]);
@@ -558,16 +584,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return {
       id: ticket.id?.toString() || `t-${Date.now()}`,
       roomId: ticketRoomId?.toString() || '',
-      roomName: ticketRoom?.name || 'Unknown',
-      block: ticketRoom?.block || 'A',
-      title: ticket.title,
-      description: ticket.description,
+      roomName: ticketRoom?.name || '',
+      block: ticketRoom?.block || '',
+      title: ticket.title || '',
+      description: ticket.description || '',
       category: categoryText,
-      priority: 'Trung bình',
+      priority: ticket.priority || 'Bình thường',
       status: statusText,
-      createdAt: ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString('vi-VN') : 'Gần đây',
-      answer: ticket.resolutionNote || ticket.answer,
-      reporter: reduxUser?.fullName || 'Sinh viên',
+      createdAt: ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString('vi-VN') : '',
+      answer: ticket.resolutionNote || ticket.answer || '',
+      reporter: reduxUser?.fullName || '',
       logs,
     };
   });
@@ -577,15 +603,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const mappedUser = reduxUser ? {
     id: reduxUser.id,
-    name: reduxUser.fullName,
-    email: reduxUser.email,
-    phone: reduxUser.phoneNumber,
-    studentId: reduxUser.username || 'SV001',
-    gender: reduxUser.gender || 'Nam',
-    class: 'D22CQCN01-B',
+    name: reduxUser.fullName || '',
+    email: reduxUser.email || '',
+    phone: reduxUser.phoneNumber || '',
+    studentId: reduxUser.username || reduxUser.studentCode || '',
+    gender: reduxUser.gender || '',
+    class: reduxUser.major || reduxUser.className || '',
     roomId: reduxRoom?.roomNodeId?.toString() || '',
-    roomName: studentRoom?.name || 'Chưa xếp',
-    block: studentRoom?.block || 'Khu A',
+    roomName: studentRoom?.name || '',
+    block: studentRoom?.block || '',
     status: reduxUser.isActive ? 'Đang ở' : 'Chờ duyệt',
     violations: [],
   } : null;

@@ -146,16 +146,29 @@ export const StudentInvoiceDetailScreen = () => {
               {language === 'en' ? 'Scan QR Code for Instant Bank Transfer' : 'Quét mã QR để chuyển khoản nhanh'}
             </Text>
             <Card style={styles.qrCard}>
-              <Image
-                source={{ uri: invoice.paymentQrCodeUrl }}
-                style={styles.qrImage}
-                resizeMode="contain"
-              />
-              <Text style={[styles.qrHelperText, { color: colors.textSecondary }]}>
-                {language === 'en'
-                  ? 'Open your Banking App or E-Wallet to scan this QR code'
-                  : 'Mở ứng dụng Ngân hàng hoặc Ví điện tử quét mã QR này'}
-              </Text>
+              {invoice.paymentQrCodeUrl ? (
+                <>
+                  <Image
+                    source={{ uri: invoice.paymentQrCodeUrl }}
+                    style={styles.qrImage}
+                    resizeMode="contain"
+                  />
+                  <Text style={[styles.qrHelperText, { color: colors.textSecondary }]}>
+                    {language === 'en'
+                      ? 'Open your Banking App or E-Wallet to scan this QR code'
+                      : 'Mở ứng dụng Ngân hàng hoặc Ví điện tử quét mã QR này'}
+                  </Text>
+                </>
+              ) : (
+                <View style={{ padding: SPACING.md, alignItems: 'center' }}>
+                  <Icon name="info" size={32} color={colors.textSecondary} style={{ marginBottom: SPACING.xs }} />
+                  <Text style={[styles.qrHelperText, { color: colors.textSecondary }]}>
+                    {language === 'en'
+                      ? 'No QR code payment available for this invoice.'
+                      : 'Chưa có thông tin mã QR thanh toán cho hóa đơn này.'}
+                  </Text>
+                </View>
+              )}
             </Card>
 
             <Button

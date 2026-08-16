@@ -32,7 +32,7 @@ export const StudentHomeScreen = () => {
               <Text style={styles.welcomeSub}>{t('hello', language)}</Text>
               <Text style={styles.welcomeName}>{currentUser?.name || currentUser?.fullName || 'Sinh viên'}</Text>
               <Text style={styles.welcomeRoom}>
-                {t('room', language)} {currentUser?.roomName || t('notAssigned', language)} • {currentUser?.block || 'Khu A'}
+                {t('room', language)} {currentUser?.roomName || t('notAssigned', language)}{currentUser?.block ? ` • ${currentUser.block}` : ''}
               </Text>
             </View>
             <View style={styles.avatarCircle}>
