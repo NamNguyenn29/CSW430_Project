@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../services/api';
+import { logoutUser } from './authSlice';
 
 interface InvoiceState {
   invoices: any[];
@@ -96,6 +97,11 @@ const invoiceSlice = createSlice({
       .addCase(fetchInvoices.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
+      })
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.invoices = [];
+        state.isLoading = false;
+        state.error = null;
       });
   },
 });

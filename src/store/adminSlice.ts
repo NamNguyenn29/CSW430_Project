@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../services/api';
+import { logoutUser } from './authSlice';
 
 interface AdminState {
   studentsList: any[];
@@ -210,6 +211,14 @@ const adminSlice = createSlice({
       })
       .addCase(fetchUserDocuments.fulfilled, (state, action) => {
         state.userDocuments = action.payload || [];
+      })
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.studentsList = [];
+        state.auditLogs = [];
+        state.notificationLogs = [];
+        state.userDocuments = [];
+        state.isLoading = false;
+        state.error = null;
       });
   },
 });

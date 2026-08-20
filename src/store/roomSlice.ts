@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../services/api';
+import { logoutUser } from './authSlice';
 
 interface RoomState {
   currentRoom: any | null;
@@ -21,9 +22,9 @@ export const fetchCurrentRoom = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await api.get('/api/users/me/current-room');
-      return response.data.result;
+      return response.data?.result || null;
     } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || error.message || 'Failed to fetch current room');
+      return null;
     }
   }
 );
@@ -113,11 +114,11 @@ const roomSlice = createSlice({
       })
       .addCase(fetchCurrentRoom.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.currentRoom = action.payload;
+        state.currentRoom = action.payload || null;
       })
-      .addCase(fetchCurrentRoom.rejected, (state, action) => {
+      .addCase(fetchCurrentRoom.rejected, (state) => {
         state.isLoading = false;
-        state.error = action.payload as string;
+        state.currentRoom = null;
       })
       .addCase(fetchRoomTree.pending, (state) => {
         state.isLoading = true;
@@ -129,6 +130,12 @@ const roomSlice = createSlice({
       .addCase(fetchRoomTree.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
+      })
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.currentRoom = null;
+        state.roomTree = [];
+        state.isLoading = false;
+        state.error = null;
       });
   },
 });

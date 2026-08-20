@@ -119,8 +119,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               const rId = roomNode.id?.toString() || (bldgName && floorName && roomNode.name ? `${bldgName}-${floorName}-${roomNode.name}` : roomNode.name);
               if (rId && !seenIds.has(rId)) {
                 seenIds.add(rId);
-                const cap = Number(roomNode.maxCapacity) || 0;
+                const cap = Number(roomNode.maxCapacity) || 4;
                 const occ = Number(roomNode.currentOccupancy) || 0;
+                const rawPrice = Number(roomNode.price || roomNode.roomPrice || 0);
+                const defaultPrice = cap > 4 ? 600000 : 1200000;
+                const price = rawPrice > 0 ? rawPrice : defaultPrice;
                 allRooms.push({
                   id: rId,
                   name: roomNode.name || '',
@@ -128,9 +131,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                   floor: floorName,
                   capacity: cap,
                   occupied: occ,
-                  price: Number(roomNode.price || roomNode.roomPrice || 0),
+                  price,
                   status: occ >= cap && cap > 0 ? 'Đầy' : 'Còn chỗ',
-                  type: roomNode.type || (cap > 0 ? `${cap} giường` : ''),
+                  type: roomNode.type || `${cap} giường`,
                   electricityIndex: Number(roomNode.electricityIndex || 0),
                   waterIndex: Number(roomNode.waterIndex || 0),
                   occupants: [],
@@ -144,8 +147,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               const fId = floorNode.id?.toString() || `${bldgName}-${floorNode.name}`;
               if (!seenIds.has(fId)) {
                 seenIds.add(fId);
-                const cap = Number(floorNode.maxCapacity) || 0;
+                const cap = Number(floorNode.maxCapacity) || 4;
                 const occ = Number(floorNode.currentOccupancy) || 0;
+                const rawPrice = Number(floorNode.price || 0);
+                const defaultPrice = cap > 4 ? 600000 : 1200000;
+                const price = rawPrice > 0 ? rawPrice : defaultPrice;
                 allRooms.push({
                   id: fId,
                   name: floorNode.name || '',
@@ -153,9 +159,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
                   floor: floorName,
                   capacity: cap,
                   occupied: occ,
-                  price: Number(floorNode.price || 0),
+                  price,
                   status: occ >= cap && cap > 0 ? 'Đầy' : 'Còn chỗ',
-                  type: floorNode.type || (cap > 0 ? `${cap} giường` : ''),
+                  type: floorNode.type || `${cap} giường`,
                   electricityIndex: Number(floorNode.electricityIndex || 0),
                   waterIndex: Number(floorNode.waterIndex || 0),
                   occupants: [],
@@ -171,8 +177,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           const bId = bldgNode.id?.toString() || bldgNode.name;
           if (!seenIds.has(bId)) {
             seenIds.add(bId);
-            const cap = Number(bldgNode.maxCapacity) || 0;
+            const cap = Number(bldgNode.maxCapacity) || 4;
             const occ = Number(bldgNode.currentOccupancy) || 0;
+            const rawPrice = Number(bldgNode.price || 0);
+            const defaultPrice = cap > 4 ? 600000 : 1200000;
+            const price = rawPrice > 0 ? rawPrice : defaultPrice;
             allRooms.push({
               id: bId,
               name: bldgNode.name || '',
@@ -180,9 +189,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               floor: bldgNode.floor || '',
               capacity: cap,
               occupied: occ,
-              price: Number(bldgNode.price || 0),
+              price,
               status: occ >= cap && cap > 0 ? 'Đầy' : 'Còn chỗ',
-              type: bldgNode.type || (cap > 0 ? `${cap} giường` : ''),
+              type: bldgNode.type || `${cap} giường`,
               electricityIndex: Number(bldgNode.electricityIndex || 0),
               waterIndex: Number(bldgNode.waterIndex || 0),
               occupants: [],
@@ -196,8 +205,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (allRooms.length === 0) {
       nodes.forEach((n: any) => {
         const id = n.id?.toString() || Math.random().toString();
-        const cap = Number(n.maxCapacity) || 0;
+        const cap = Number(n.maxCapacity) || 4;
         const occ = Number(n.currentOccupancy) || 0;
+        const rawPrice = Number(n.price || 0);
+        const defaultPrice = cap > 4 ? 600000 : 1200000;
+        const price = rawPrice > 0 ? rawPrice : defaultPrice;
         allRooms.push({
           id,
           name: n.name || '',
@@ -205,9 +217,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           floor: n.floor || '',
           capacity: cap,
           occupied: occ,
-          price: Number(n.price || 0),
+          price,
           status: occ >= cap && cap > 0 ? 'Đầy' : 'Còn chỗ',
-          type: n.type || (cap > 0 ? `${cap} giường` : ''),
+          type: n.type || `${cap} giường`,
           electricityIndex: Number(n.electricityIndex || 0),
           waterIndex: Number(n.waterIndex || 0),
           occupants: [],
@@ -262,6 +274,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (reduxRole === 'student') {
         dispatch(fetchCurrentRoom());
         dispatch(fetchRoomTree());
+        dispatch(fetchStudentsAdmin());
         dispatch(fetchMyTickets());
         dispatch(fetchInvoices());
         dispatch(fetchAnnouncements());

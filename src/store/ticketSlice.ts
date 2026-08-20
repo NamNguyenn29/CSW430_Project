@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import api from '../services/api';
+import { logoutUser } from './authSlice';
 
 interface TicketState {
   myTickets: any[];
@@ -122,6 +123,12 @@ const ticketSlice = createSlice({
       .addCase(fetchAllTickets.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
+      })
+      .addCase(logoutUser.fulfilled, (state) => {
+        state.myTickets = [];
+        state.allTickets = [];
+        state.isLoading = false;
+        state.error = null;
       });
   },
 });
